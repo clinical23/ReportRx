@@ -67,7 +67,7 @@ export default async function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-base">Notifications</CardTitle>
           <CardDescription>
-            Email summaries for tasks and report deadlines.
+            Email summaries and report deadlines.
           </CardDescription>
         </CardHeader>
         <CardContent>

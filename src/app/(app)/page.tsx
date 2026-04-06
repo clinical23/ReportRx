@@ -164,7 +164,7 @@ export default async function DashboardPage() {
           <CardContent className="space-y-4">
             {recentBatches.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No task batches yet. Create one on the Tasks page.
+                No task batches recorded yet.
               </p>
             ) : (
               recentBatches.slice(0, 5).map((batch) => (

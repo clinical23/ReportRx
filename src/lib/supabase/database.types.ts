@@ -278,7 +278,3 @@ export interface Database {
 export type TaskBatch = Database["public"]["Tables"]["task_batches"]["Row"];
 export type Task = Database["public"]["Tables"]["tasks"]["Row"];
 export type Clinician = Database["public"]["Tables"]["clinicians"]["Row"];
-
-export type TaskWithClinician = Task & {
-  clinicians: { name: string } | null;
-};
