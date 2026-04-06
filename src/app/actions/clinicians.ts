@@ -16,12 +16,16 @@ export async function addClinicianAction(
     return { ok: false, error: "Name is required" };
   }
 
-  const { error } = await createClinician({ name });
+  const practiceRaw = String(formData.get("practice_id") ?? "").trim();
+  const practice_id = practiceRaw.length > 0 ? practiceRaw : null;
+
+  const { error } = await createClinician({ name, practice_id });
   if (error) {
     return { ok: false, error };
   }
 
   revalidatePath("/", "page");
   revalidatePath("/clinicians", "page");
+  revalidatePath("/reporting", "page");
   return { ok: true };
 }

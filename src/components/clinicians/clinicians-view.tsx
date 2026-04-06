@@ -6,7 +6,6 @@ import { CheckCircle2 } from "lucide-react";
 
 import { addClinicianAction } from "@/app/actions/clinicians";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -15,16 +14,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Clinician } from "@/lib/supabase/database.types";
+import type { Practice } from "@/lib/supabase/activity";
+import type { ClinicianWithPractice } from "@/lib/supabase/data";
 
 const inputClassName =
   "w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+const selectClassName =
+  "w-full appearance-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 type Props = {
-  clinicians: Clinician[];
+  clinicians: ClinicianWithPractice[];
+  practices: Practice[];
 };
 
-export function CliniciansView({ clinicians }: Props) {
+export function CliniciansView({ clinicians, practices }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
@@ -81,52 +85,52 @@ export function CliniciansView({ clinicians }: Props) {
             to create one.
           </p>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/50 text-left">
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Name
-                </th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">
-                  Role
-                </th>
-                <th className="hidden px-4 py-3 font-medium text-muted-foreground sm:table-cell">
-                  Active caseload
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {clinicians.map((c) => (
-                <tr
-                  key={c.id}
-                  className="border-b border-border last:border-0 hover:bg-muted/30"
-                >
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {c.name}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{c.role}</td>
-                  <td className="hidden px-4 py-3 tabular-nums text-muted-foreground sm:table-cell">
-                    {c.active_caseload}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[36rem] text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50 text-left">
+                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                    Name
+                  </th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                    Role
+                  </th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                    Practice
+                  </th>
+                  <th className="hidden px-4 py-3 font-medium text-muted-foreground sm:table-cell">
+                    Active caseload
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {clinicians.map((c) => (
+                  <tr
+                    key={c.id}
+                    className="border-b border-border last:border-0 hover:bg-muted/30"
+                  >
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {c.name}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{c.role}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {c.practice_name ?? "—"}
+                    </td>
+                    <td className="hidden px-4 py-3 tabular-nums text-muted-foreground sm:table-cell">
+                      {c.active_caseload}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
-
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-sm text-muted-foreground">
-            Data loads from Supabase. Tighten Row Level Security when you add
-            authentication.
-          </p>
-        </CardContent>
-      </Card>
 
       <AddClinicianDialog
         open={open}
         onOpenChange={setOpen}
+        practices={practices}
         onSaved={() => {
           setOpen(false);
           showSuccess();
@@ -139,10 +143,12 @@ export function CliniciansView({ clinicians }: Props) {
 function AddClinicianDialog({
   open,
   onOpenChange,
+  practices,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  practices: Practice[];
   onSaved: () => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -189,7 +195,7 @@ function AddClinicianDialog({
           <DialogTitle>Add clinician</DialogTitle>
           <DialogDescription>
             New clinicians default to role &quot;Clinician&quot; with zero active
-            caseload.
+            caseload. Optionally assign a practice.
           </DialogDescription>
         </DialogHeader>
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
@@ -211,6 +217,32 @@ function AddClinicianDialog({
               className={inputClassName}
               onChange={() => setError(null)}
             />
+          </div>
+          <div>
+            <label
+              htmlFor="clinician-practice"
+              className="mb-1.5 block text-xs font-medium text-muted-foreground"
+            >
+              Practice
+            </label>
+            <select
+              id="clinician-practice"
+              name="practice_id"
+              disabled={isPending || practices.length === 0}
+              className={selectClassName}
+            >
+              <option value="">Not set</option>
+              {practices.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            {practices.length === 0 ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                No practices in the directory yet.
+              </p>
+            ) : null}
           </div>
           {error ? (
             <p className="text-sm text-destructive" role="alert">

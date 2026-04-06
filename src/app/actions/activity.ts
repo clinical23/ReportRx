@@ -69,6 +69,7 @@ export async function saveActivityLog(
   }
   revalidatePath('/activity')
   revalidatePath('/')
+  revalidatePath('/reporting')
   return { success: true, log_id }
 }
 
@@ -120,5 +121,6 @@ export async function addActivityCategory(
     return { success: false, error: 'Failed to add category.' }
   }
   revalidatePath('/activity')
+  revalidatePath('/reporting')
   return { success: true }
 }

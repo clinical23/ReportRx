@@ -16,11 +16,15 @@ export async function getTasks(): Promise<TaskBatch[]> {
   return data ?? [];
 }
 
-export async function getClinicians(): Promise<Clinician[]> {
+export type ClinicianWithPractice = Clinician & {
+  practice_name: string | null;
+};
+
+export async function getClinicians(): Promise<ClinicianWithPractice[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("clinicians")
-    .select("*")
+    .select("id, name, role, active_caseload, created_at, practice_id, practices(name)")
     .order("name", { ascending: true });
 
   if (error) {
@@ -28,7 +32,21 @@ export async function getClinicians(): Promise<Clinician[]> {
     return [];
   }
 
-  return data ?? [];
+  const rows = data ?? [];
+  return rows.map((row) => {
+    const r = row as Clinician & {
+      practices: { name: string } | null;
+    };
+    return {
+      id: r.id,
+      name: r.name,
+      role: r.role,
+      active_caseload: r.active_caseload,
+      created_at: r.created_at,
+      practice_id: r.practice_id ?? null,
+      practice_name: r.practices?.name ?? null,
+    };
+  });
 }
 
 /** Same data as {@link getClinicians}; used by activity and other call sites. */
@@ -38,16 +56,22 @@ export async function listClinicians(): Promise<Clinician[]> {
 
 export async function createClinician(input: {
   name: string;
+  practice_id?: string | null;
 }): Promise<{ clinician: Clinician | null; error: string | null }> {
   const name = input.name.trim();
   if (!name) {
     return { clinician: null, error: "Name is required" };
   }
 
+  const practice_id =
+    input.practice_id && input.practice_id.trim() !== ""
+      ? input.practice_id.trim()
+      : null;
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("clinicians")
-    .insert({ name, role: "Clinician" })
+    .insert({ name, role: "Clinician", practice_id })
     .select()
     .single();
 

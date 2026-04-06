@@ -89,6 +89,7 @@ export interface Database {
           role: string;
           active_caseload: number;
           created_at: string;
+          practice_id: string | null;
         };
         Insert: {
           id?: string;
@@ -96,6 +97,7 @@ export interface Database {
           role?: string;
           active_caseload?: number;
           created_at?: string;
+          practice_id?: string | null;
         };
         Update: {
           id?: string;
@@ -103,8 +105,17 @@ export interface Database {
           role?: string;
           active_caseload?: number;
           created_at?: string;
+          practice_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "clinicians_practice_id_fkey";
+            columns: ["practice_id"];
+            isOneToOne: false;
+            referencedRelation: "practices";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       profiles: {
         Row: {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  BarChart3,
   LayoutDashboard,
   LogOut,
   Stethoscope,
@@ -18,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/activity", label: "Activity", icon: Activity },
+  { href: "/reporting", label: "Reporting", icon: BarChart3 },
   { href: "/clinicians", label: "Clinicians", icon: Stethoscope },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
