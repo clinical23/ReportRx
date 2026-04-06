@@ -82,40 +82,59 @@ export interface Database {
           },
         ];
       };
-      clinicians: {
+      clinician_practices: {
         Row: {
-          id: string;
-          name: string;
-          role: string;
-          active_caseload: number;
-          created_at: string;
-          practice_id: string | null;
+          clinician_id: string;
+          practice_id: string;
         };
         Insert: {
-          id?: string;
-          name: string;
-          role?: string;
-          active_caseload?: number;
-          created_at?: string;
-          practice_id?: string | null;
+          clinician_id: string;
+          practice_id: string;
         };
         Update: {
-          id?: string;
-          name?: string;
-          role?: string;
-          active_caseload?: number;
-          created_at?: string;
-          practice_id?: string | null;
+          clinician_id?: string;
+          practice_id?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "clinicians_practice_id_fkey";
+            foreignKeyName: "clinician_practices_clinician_id_fkey";
+            columns: ["clinician_id"];
+            isOneToOne: false;
+            referencedRelation: "clinicians";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "clinician_practices_practice_id_fkey";
             columns: ["practice_id"];
             isOneToOne: false;
             referencedRelation: "practices";
             referencedColumns: ["id"];
           },
         ];
+      };
+      clinicians: {
+        Row: {
+          id: string;
+          name: string;
+          role: string;
+          created_at: string;
+          pcn_name: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          role?: string;
+          created_at?: string;
+          pcn_name?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          role?: string;
+          created_at?: string;
+          pcn_name?: string | null;
+        };
+        Relationships: [];
       };
       profiles: {
         Row: {
