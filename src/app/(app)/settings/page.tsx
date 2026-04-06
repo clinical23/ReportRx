@@ -5,8 +5,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PcnsSettingsSection } from "@/components/settings/pcns-settings-section";
 import { Separator } from "@/components/ui/separator";
 import { getAuthProfile } from "@/lib/supabase/auth-profile";
+import { listPcns } from "@/lib/supabase/data";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +16,8 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const session = await getAuthProfile();
   const profile = session?.profile;
+
+  const pcns = await listPcns();
 
   let practiceName = "Not linked to a practice";
   if (profile?.practice_id) {
@@ -63,6 +67,20 @@ export default async function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">PCNs</CardTitle>
+          <CardDescription>
+            Primary Care Networks used when assigning clinicians. Deleting a PCN
+            removes it from the list and unlinks it from any clinicians.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PcnsSettingsSection initialPcns={pcns} />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Notifications</CardTitle>

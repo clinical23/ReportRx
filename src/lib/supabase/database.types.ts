@@ -112,27 +112,72 @@ export interface Database {
           },
         ];
       };
+      pcns: {
+        Row: {
+          id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      clinician_pcns: {
+        Row: {
+          clinician_id: string;
+          pcn_id: string;
+        };
+        Insert: {
+          clinician_id: string;
+          pcn_id: string;
+        };
+        Update: {
+          clinician_id?: string;
+          pcn_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "clinician_pcns_clinician_id_fkey";
+            columns: ["clinician_id"];
+            isOneToOne: false;
+            referencedRelation: "clinicians";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "clinician_pcns_pcn_id_fkey";
+            columns: ["pcn_id"];
+            isOneToOne: false;
+            referencedRelation: "pcns";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       clinicians: {
         Row: {
           id: string;
           name: string;
           role: string;
           created_at: string;
-          pcn_name: string | null;
         };
         Insert: {
           id?: string;
           name: string;
           role?: string;
           created_at?: string;
-          pcn_name?: string | null;
         };
         Update: {
           id?: string;
           name?: string;
           role?: string;
           created_at?: string;
-          pcn_name?: string | null;
         };
         Relationships: [];
       };

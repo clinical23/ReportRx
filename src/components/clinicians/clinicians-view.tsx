@@ -18,7 +18,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Practice } from "@/lib/supabase/activity";
-import type { ClinicianDirectoryRow } from "@/lib/supabase/data";
+import type {
+  ClinicianDirectoryRow,
+  PcnListItem,
+} from "@/lib/supabase/data";
 
 const inputClassName =
   "w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -26,9 +29,10 @@ const inputClassName =
 type Props = {
   clinicians: ClinicianDirectoryRow[];
   practices: Practice[];
+  pcns: PcnListItem[];
 };
 
-export function CliniciansView({ clinicians, practices }: Props) {
+export function CliniciansView({ clinicians, practices, pcns }: Props) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [editRow, setEditRow] = useState<ClinicianDirectoryRow | null>(null);
@@ -125,8 +129,10 @@ export function CliniciansView({ clinicians, practices }: Props) {
                         ? c.practice_names.join(", ")
                         : "—"}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {c.pcn_name?.trim() ? c.pcn_name : "—"}
+                    <td className="max-w-[14rem] px-4 py-3 text-muted-foreground">
+                      {c.pcn_names.length > 0
+                        ? c.pcn_names.join(", ")
+                        : "—"}
                     </td>
                     <td className="hidden px-4 py-3 tabular-nums text-muted-foreground md:table-cell">
                       {c.hours_this_month > 0
@@ -162,6 +168,7 @@ export function CliniciansView({ clinicians, practices }: Props) {
         mode="add"
         initial={null}
         practices={practices}
+        pcns={pcns}
         onSaved={() => {
           setAddOpen(false);
           showBanner("Clinician added.");
@@ -177,6 +184,7 @@ export function CliniciansView({ clinicians, practices }: Props) {
         mode="edit"
         initial={editRow}
         practices={practices}
+        pcns={pcns}
         onSaved={() => {
           setEditRow(null);
           showBanner("Clinician updated.");
@@ -192,6 +200,7 @@ function ClinicianFormDialog({
   mode,
   initial,
   practices,
+  pcns,
   onSaved,
 }: {
   open: boolean;
@@ -199,6 +208,7 @@ function ClinicianFormDialog({
   mode: "add" | "edit";
   initial: ClinicianDirectoryRow | null;
   practices: Practice[];
+  pcns: PcnListItem[];
   onSaved: () => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -296,23 +306,6 @@ function ClinicianFormDialog({
             />
           </div>
           <div>
-            <label
-              htmlFor={`clinician-pcn-${mode}`}
-              className="mb-1.5 block text-xs font-medium text-muted-foreground"
-            >
-              PCN
-            </label>
-            <input
-              id={`clinician-pcn-${mode}`}
-              name="pcn_name"
-              type="text"
-              disabled={isPending}
-              className={inputClassName}
-              placeholder="Primary care network name"
-              defaultValue={initial?.pcn_name ?? ""}
-            />
-          </div>
-          <div>
             <p className="mb-2 text-xs font-medium text-muted-foreground">
               Practices
             </p>
@@ -346,6 +339,42 @@ function ClinicianFormDialog({
                             {p.pcn_name}
                           </span>
                         ) : null}
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              PCNs
+            </p>
+            {pcns.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No PCNs in Settings yet. Add PCNs under Settings → PCNs.
+              </p>
+            ) : (
+              <ul className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-border bg-muted/20 p-3">
+                {pcns.map((p) => {
+                  const checked =
+                    initial?.pcn_ids.includes(p.id) ?? false;
+                  return (
+                    <li key={p.id} className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        name="pcn_ids"
+                        value={p.id}
+                        id={`${mode}-pcn-${p.id}`}
+                        disabled={isPending}
+                        defaultChecked={checked}
+                        className="mt-1 rounded border-input"
+                      />
+                      <label
+                        htmlFor={`${mode}-pcn-${p.id}`}
+                        className="text-sm leading-snug text-foreground"
+                      >
+                        {p.name}
                       </label>
                     </li>
                   );

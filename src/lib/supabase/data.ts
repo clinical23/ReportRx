@@ -40,12 +40,58 @@ export async function listClinicians(): Promise<ClinicianListItem[]> {
   return (data ?? []) as ClinicianListItem[];
 }
 
+export type PcnListItem = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
+export async function listPcns(): Promise<PcnListItem[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("pcns")
+    .select("id, name, created_at")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("[listPcns]", error.message);
+    return [];
+  }
+
+  return (data ?? []) as PcnListItem[];
+}
+
+export async function createPcn(name: string): Promise<{ error: string | null }> {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return { error: "Name is required" };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("pcns").insert({ name: trimmed });
+  if (error) {
+    console.error("[createPcn]", error.message);
+    return { error: error.message };
+  }
+  return { error: null };
+}
+
+export async function deletePcn(id: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("pcns").delete().eq("id", id);
+  if (error) {
+    console.error("[deletePcn]", error.message);
+    return { error: error.message };
+  }
+  return { error: null };
+}
+
 export type ClinicianDirectoryRow = {
   id: string;
   name: string;
   role: string;
-  pcn_name: string | null;
   created_at: string;
+  pcn_names: string[];
+  pcn_ids: string[];
   practice_names: string[];
   practice_ids: string[];
   hours_this_month: number;
@@ -80,54 +126,35 @@ type ClinicianRowDb = {
   name: string;
   role: string;
   created_at: string;
-  pcn_name?: string | null;
 };
 
 /**
- * Loads clinicians + practice links without nested PostgREST embeds (avoids
+ * Loads clinicians + practice and PCN links without nested PostgREST embeds (avoids
  * schema-cache / relationship errors). Merges junction rows in memory.
  */
 export async function getClinicians(): Promise<ClinicianDirectoryRow[]> {
   const supabase = await createClient();
 
-  const withPcn = await supabase
+  const { data: clinicianRows, error: clinError } = await supabase
     .from("clinicians")
-    .select("id, name, role, pcn_name, created_at")
+    .select("id, name, role, created_at")
     .order("name", { ascending: true });
 
-  let clinicianRows: ClinicianRowDb[];
-
-  if (!withPcn.error && withPcn.data) {
-    clinicianRows = withPcn.data as ClinicianRowDb[];
-  } else if (withPcn.error) {
-    const msg = withPcn.error.message.toLowerCase();
-    const missingColumn =
-      msg.includes("pcn_name") ||
-      (msg.includes("column") && msg.includes("does not exist"));
-    if (!missingColumn) {
-      console.error("[getClinicians] clinicians", withPcn.error.message);
-      return [];
-    }
-    const legacy = await supabase
-      .from("clinicians")
-      .select("id, name, role, created_at")
-      .order("name", { ascending: true });
-    if (legacy.error || !legacy.data) {
-      console.error("[getClinicians] clinicians", legacy.error?.message);
-      return [];
-    }
-    clinicianRows = (legacy.data as Omit<ClinicianRowDb, "pcn_name">[]).map(
-      (r) => ({ ...r, pcn_name: null }),
-    );
-  } else {
+  if (clinError || !clinicianRows) {
+    console.error("[getClinicians] clinicians", clinError?.message);
     return [];
   }
 
-  const [hoursMap, linksRes, practicesRes] = await Promise.all([
-    getClinicianHoursThisMonthMap(),
-    supabase.from("clinician_practices").select("clinician_id, practice_id"),
-    supabase.from("practices").select("id, name"),
-  ]);
+  const rows = clinicianRows as ClinicianRowDb[];
+
+  const [hoursMap, linksRes, practicesRes, pcnLinksRes, pcnsRes] =
+    await Promise.all([
+      getClinicianHoursThisMonthMap(),
+      supabase.from("clinician_practices").select("clinician_id, practice_id"),
+      supabase.from("practices").select("id, name"),
+      supabase.from("clinician_pcns").select("clinician_id, pcn_id"),
+      supabase.from("pcns").select("id, name"),
+    ]);
 
   if (linksRes.error) {
     console.error(
@@ -138,11 +165,23 @@ export async function getClinicians(): Promise<ClinicianDirectoryRow[]> {
   if (practicesRes.error) {
     console.error("[getClinicians] practices", practicesRes.error.message);
   }
+  if (pcnLinksRes.error) {
+    console.error("[getClinicians] clinician_pcns", pcnLinksRes.error.message);
+  }
+  if (pcnsRes.error) {
+    console.error("[getClinicians] pcns", pcnsRes.error.message);
+  }
 
   const nameByPracticeId = new Map<string, string>();
   for (const p of practicesRes.data ?? []) {
     const row = p as { id: string; name: string };
     nameByPracticeId.set(row.id, row.name);
+  }
+
+  const nameByPcnId = new Map<string, string>();
+  for (const p of pcnsRes.data ?? []) {
+    const row = p as { id: string; name: string };
+    nameByPcnId.set(row.id, row.name);
   }
 
   const linksByClinician = new Map<
@@ -171,18 +210,46 @@ export async function getClinicians(): Promise<ClinicianDirectoryRow[]> {
     g.practice_names.sort((a, b) => a.localeCompare(b));
   }
 
-  return clinicianRows.map((r) => {
+  const pcnByClinician = new Map<string, { id: string; name: string }[]>();
+
+  if (!pcnLinksRes.error && pcnLinksRes.data) {
+    for (const raw of pcnLinksRes.data as {
+      clinician_id: string;
+      pcn_id: string;
+    }[]) {
+      const cid = raw.clinician_id;
+      const pid = raw.pcn_id;
+      const n = nameByPcnId.get(pid);
+      if (!n) continue;
+      if (!pcnByClinician.has(cid)) {
+        pcnByClinician.set(cid, []);
+      }
+      pcnByClinician.get(cid)!.push({ id: pid, name: n });
+    }
+  }
+
+  for (const pairs of pcnByClinician.values()) {
+    pairs.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  return rows.map((r) => {
     const links = linksByClinician.get(r.id) ?? {
       practice_ids: [],
       practice_names: [],
+    };
+    const pcnPairs = pcnByClinician.get(r.id) ?? [];
+    const pcns = {
+      pcn_ids: pcnPairs.map((p) => p.id),
+      pcn_names: pcnPairs.map((p) => p.name),
     };
     const rawHours = hoursMap.get(r.id) ?? 0;
     return {
       id: r.id,
       name: r.name,
       role: r.role,
-      pcn_name: r.pcn_name ?? null,
       created_at: r.created_at,
+      pcn_ids: pcns.pcn_ids,
+      pcn_names: pcns.pcn_names,
       practice_ids: links.practice_ids,
       practice_names: links.practice_names,
       hours_this_month: Math.round(rawHours * 10) / 10,
@@ -193,8 +260,8 @@ export async function getClinicians(): Promise<ClinicianDirectoryRow[]> {
 export async function createClinician(input: {
   name: string;
   role?: string;
-  pcn_name?: string | null;
   practice_ids: string[];
+  pcn_ids: string[];
 }): Promise<{ clinician: Clinician | null; error: string | null }> {
   const name = input.name.trim();
   if (!name) {
@@ -202,15 +269,11 @@ export async function createClinician(input: {
   }
 
   const role = (input.role ?? "Clinician").trim() || "Clinician";
-  const pcn =
-    input.pcn_name && input.pcn_name.trim() !== ""
-      ? input.pcn_name.trim()
-      : null;
 
   const supabase = await createClient();
   const { data: clinician, error } = await supabase
     .from("clinicians")
-    .insert({ name, role, pcn_name: pcn })
+    .insert({ name, role })
     .select()
     .single();
 
@@ -219,19 +282,36 @@ export async function createClinician(input: {
     return { clinician: null, error: error?.message ?? "Insert failed" };
   }
 
-  const ids = [...new Set(input.practice_ids.filter(Boolean))];
-  if (ids.length > 0) {
+  const practiceIds = [...new Set(input.practice_ids.filter(Boolean))];
+  if (practiceIds.length > 0) {
     const { error: linkError } = await supabase.from("clinician_practices").insert(
-      ids.map((practice_id) => ({
+      practiceIds.map((practice_id) => ({
         clinician_id: clinician.id,
         practice_id,
       })),
     );
     if (linkError) {
-      console.error("[createClinician] links", linkError.message);
+      console.error("[createClinician] practice links", linkError.message);
       return {
         clinician: null,
         error: linkError.message,
+      };
+    }
+  }
+
+  const pcnIds = [...new Set(input.pcn_ids.filter(Boolean))];
+  if (pcnIds.length > 0) {
+    const { error: pcnErr } = await supabase.from("clinician_pcns").insert(
+      pcnIds.map((pcn_id) => ({
+        clinician_id: clinician.id,
+        pcn_id,
+      })),
+    );
+    if (pcnErr) {
+      console.error("[createClinician] pcn links", pcnErr.message);
+      return {
+        clinician: null,
+        error: pcnErr.message,
       };
     }
   }
@@ -243,8 +323,8 @@ export async function updateClinician(input: {
   id: string;
   name: string;
   role: string;
-  pcn_name: string | null;
   practice_ids: string[];
+  pcn_ids: string[];
 }): Promise<{ error: string | null }> {
   const name = input.name.trim();
   if (!name) {
@@ -252,44 +332,73 @@ export async function updateClinician(input: {
   }
 
   const role = input.role.trim() || "Clinician";
-  const pcn =
-    input.pcn_name && input.pcn_name.trim() !== ""
-      ? input.pcn_name.trim()
-      : null;
 
   const supabase = await createClient();
 
-  const { error: upError } = await supabase
+  const { data: updated, error: upError } = await supabase
     .from("clinicians")
-    .update({ name, role, pcn_name: pcn })
-    .eq("id", input.id);
+    .update({ name, role })
+    .eq("id", input.id)
+    .select("id")
+    .maybeSingle();
 
   if (upError) {
     console.error("[updateClinician]", upError.message);
     return { error: upError.message };
   }
+  if (!updated) {
+    console.error("[updateClinician] no row updated (check RLS policies)");
+    return {
+      error:
+        "Could not update clinician. If this persists, ensure the database allows updates on clinicians (RLS).",
+    };
+  }
 
-  const { error: delError } = await supabase
+  const { error: delPracticeErr } = await supabase
     .from("clinician_practices")
     .delete()
     .eq("clinician_id", input.id);
 
-  if (delError) {
-    console.error("[updateClinician] delete links", delError.message);
-    return { error: delError.message };
+  if (delPracticeErr) {
+    console.error("[updateClinician] delete practice links", delPracticeErr.message);
+    return { error: delPracticeErr.message };
   }
 
-  const ids = [...new Set(input.practice_ids.filter(Boolean))];
-  if (ids.length > 0) {
+  const practiceIds = [...new Set(input.practice_ids.filter(Boolean))];
+  if (practiceIds.length > 0) {
     const { error: insError } = await supabase.from("clinician_practices").insert(
-      ids.map((practice_id) => ({
+      practiceIds.map((practice_id) => ({
         clinician_id: input.id,
         practice_id,
       })),
     );
     if (insError) {
-      console.error("[updateClinician] insert links", insError.message);
+      console.error("[updateClinician] insert practice links", insError.message);
       return { error: insError.message };
+    }
+  }
+
+  const { error: delPcnErr } = await supabase
+    .from("clinician_pcns")
+    .delete()
+    .eq("clinician_id", input.id);
+
+  if (delPcnErr) {
+    console.error("[updateClinician] delete pcn links", delPcnErr.message);
+    return { error: delPcnErr.message };
+  }
+
+  const pcnIds = [...new Set(input.pcn_ids.filter(Boolean))];
+  if (pcnIds.length > 0) {
+    const { error: pcnInsErr } = await supabase.from("clinician_pcns").insert(
+      pcnIds.map((pcn_id) => ({
+        clinician_id: input.id,
+        pcn_id,
+      })),
+    );
+    if (pcnInsErr) {
+      console.error("[updateClinician] insert pcn links", pcnInsErr.message);
+      return { error: pcnInsErr.message };
     }
   }
 

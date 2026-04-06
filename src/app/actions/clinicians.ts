@@ -16,6 +16,14 @@ function parsePracticeIds(formData: FormData): string[] {
   return [...new Set(ids)];
 }
 
+function parsePcnIds(formData: FormData): string[] {
+  const all = formData.getAll("pcn_ids");
+  const ids = all
+    .map((v) => String(v).trim())
+    .filter((v) => v.length > 0);
+  return [...new Set(ids)];
+}
+
 export async function addClinicianAction(
   formData: FormData,
 ): Promise<ClinicianMutationResult> {
@@ -25,15 +33,14 @@ export async function addClinicianAction(
   }
 
   const role = String(formData.get("role") ?? "Clinician").trim() || "Clinician";
-  const pcnRaw = String(formData.get("pcn_name") ?? "").trim();
-  const pcn_name = pcnRaw.length > 0 ? pcnRaw : null;
   const practice_ids = parsePracticeIds(formData);
+  const pcn_ids = parsePcnIds(formData);
 
   const { error } = await createClinician({
     name,
     role,
-    pcn_name,
     practice_ids,
+    pcn_ids,
   });
   if (error) {
     return { ok: false, error };
@@ -60,16 +67,15 @@ export async function updateClinicianAction(
   }
 
   const role = String(formData.get("role") ?? "").trim() || "Clinician";
-  const pcnRaw = String(formData.get("pcn_name") ?? "").trim();
-  const pcn_name = pcnRaw.length > 0 ? pcnRaw : null;
   const practice_ids = parsePracticeIds(formData);
+  const pcn_ids = parsePcnIds(formData);
 
   const { error } = await updateClinician({
     id,
     name,
     role,
-    pcn_name,
     practice_ids,
+    pcn_ids,
   });
   if (error) {
     return { ok: false, error };
