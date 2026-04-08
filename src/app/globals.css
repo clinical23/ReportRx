@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* Employment Hero–inspired: teal primary, slate neutrals, soft surfaces */
+    /* Employment Hero-inspired: teal primary, slate neutrals, soft surfaces */
     --background: 210 40% 98%;
     --foreground: 222 47% 16%;
     --card: 0 0% 100%;

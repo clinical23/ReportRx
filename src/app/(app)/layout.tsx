@@ -16,7 +16,7 @@ export default async function AppLayout({
   const roleLabel = nav?.roleLabel ?? "User";
 
   return (
-    <div className="flex min-h-screen bg-[#f8fafc]">
+    <div className="flex min-h-screen flex-row bg-[#f8fafc]">
       <AppSidebar
         userDisplayName={userDisplayName}
         userEmail={userEmail}
