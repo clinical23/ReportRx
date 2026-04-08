@@ -61,14 +61,110 @@ export async function createPcn(name: string): Promise<{ error: string | null }>
   return { error: null };
 }
 
+export async function updatePcn(
+  id: string,
+  name: string,
+): Promise<{ error: string | null }> {
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "Name is required" };
+  const supabase = await createClient();
+
+  // Also update practices.pcn_name for any practices pointing at the old name
+  const { data: old } = await supabase
+    .from("pcns")
+    .select("name")
+    .eq("id", id)
+    .maybeSingle();
+  const { error } = await supabase
+    .from("pcns")
+    .update({ name: trimmed })
+    .eq("id", id);
+  if (error) {
+    console.error("[updatePcn]", error.message);
+    return { error: error.message };
+  }
+  if (old?.name && old.name !== trimmed) {
+    await supabase
+      .from("practices")
+      .update({ pcn_name: trimmed })
+      .eq("pcn_name", old.name);
+  }
+  return { error: null };
+}
+
 export async function deletePcn(id: string): Promise<{ error: string | null }> {
   const supabase = await createClient();
+  // Clear pcn_name on practices that reference this PCN
+  const { data: pcn } = await supabase
+    .from("pcns")
+    .select("name")
+    .eq("id", id)
+    .maybeSingle();
+  if (pcn?.name) {
+    await supabase
+      .from("practices")
+      .update({ pcn_name: null })
+      .eq("pcn_name", pcn.name);
+  }
   const { error } = await supabase.from("pcns").delete().eq("id", id);
   if (error) {
     console.error("[deletePcn]", error.message);
     return { error: error.message };
   }
   return { error: null };
+}
+
+export async function updatePracticeName(
+  id: string,
+  name: string,
+): Promise<{ error: string | null }> {
+  const trimmed = name.trim();
+  if (!trimmed) return { error: "Name is required" };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("practices")
+    .update({ name: trimmed })
+    .eq("id", id);
+  if (error) {
+    console.error("[updatePracticeName]", error.message);
+    return { error: error.message };
+  }
+  return { error: null };
+}
+
+export async function assignPracticeToPcn(
+  practiceId: string,
+  pcnName: string | null,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("practices")
+    .update({ pcn_name: pcnName })
+    .eq("id", practiceId);
+  if (error) {
+    console.error("[assignPracticeToPcn]", error.message);
+    return { error: error.message };
+  }
+  return { error: null };
+}
+
+export type PracticeWithPcn = {
+  id: string;
+  name: string;
+  pcn_name: string | null;
+};
+
+export async function listPracticesWithPcn(): Promise<PracticeWithPcn[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("practices")
+    .select("id, name, pcn_name")
+    .order("name");
+  if (error) {
+    console.error("[listPracticesWithPcn]", error.message);
+    return [];
+  }
+  return (data ?? []) as PracticeWithPcn[];
 }
 
 export type ClinicianDirectoryRow = {

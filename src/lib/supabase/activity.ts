@@ -296,6 +296,57 @@ export async function getDashboardSnapshot(
   }
 }
 
+/* ------------------------------------------------------------------ */
+/*  Daily breakdown                                                    */
+/* ------------------------------------------------------------------ */
+
+export type DailyBreakdownEntry = {
+  log_id: string;
+  clinician_name: string;
+  practice_name: string;
+  category_name: string;
+  appointment_count: number;
+  hours_worked: number | null;
+};
+
+/**
+ * All activity_report rows for a single date, scoped to visible practices.
+ * For clinicians the caller can optionally pass clinicianId to restrict further.
+ */
+export async function getDailyBreakdown(
+  date: string,
+  practiceScopeIds: string[],
+  clinicianId?: string | null,
+): Promise<DailyBreakdownEntry[]> {
+  if (practiceScopeIds.length === 0) return [];
+
+  const supabase = await createClient();
+  let query = supabase
+    .from("activity_report")
+    .select("*")
+    .eq("log_date", date)
+    .in("practice_id", practiceScopeIds);
+
+  if (clinicianId) {
+    query = query.eq("clinician_id", clinicianId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("[getDailyBreakdown]", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((r: Record<string, unknown>) => ({
+    log_id: String(r.log_id ?? ""),
+    clinician_name: String(r.clinician_name ?? ""),
+    practice_name: String(r.practice_name ?? ""),
+    category_name: String(r.category_name ?? ""),
+    appointment_count: Number(r.appointment_count ?? 0),
+    hours_worked: r.hours_worked == null ? null : Number(r.hours_worked),
+  }));
+}
+
 export type ReportingChartsData = {
   byCategory: { name: string; count: number }[]
   byClinician: { name: string; count: number }[]

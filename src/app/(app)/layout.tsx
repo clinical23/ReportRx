@@ -16,7 +16,7 @@ export default async function AppLayout({
   const roleLabel = nav?.roleLabel ?? "User";
 
   return (
-    <div className="flex min-h-screen flex-row bg-[#f8fafc]">
+    <div className="flex min-h-screen flex-row bg-[#f8fafc] dark:bg-[#0f1117]">
       <AppSidebar
         userDisplayName={userDisplayName}
         userEmail={userEmail}
@@ -30,7 +30,7 @@ export default async function AppLayout({
           userEmail={userEmail}
           initials={initials}
         />
-        <main className="app-content-bg flex-1 overflow-auto p-4 sm:p-6">
+        <main className="app-content-bg flex-1 overflow-auto p-4 sm:p-6 dark:bg-[#0f1117]">
           {children}
         </main>
       </div>

@@ -408,15 +408,34 @@ function ClinicianFormDialog({
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
-    const name = String(new FormData(form).get("name") ?? "").trim();
+    const formData = new FormData(form);
+
+    const name = String(formData.get("name") ?? "").trim();
     if (!name) {
-      setError("Name is required");
+      setError("Name is required.");
+      return;
+    }
+
+    const typeId = String(formData.get("clinician_type_id") ?? "").trim();
+    if (!typeId) {
+      setError("Clinician type is required.");
+      return;
+    }
+
+    const practiceIds = formData.getAll("practice_ids").filter((v) => String(v).trim());
+    if (practiceIds.length === 0) {
+      setError("Select at least one practice.");
+      return;
+    }
+
+    const pcnIds = formData.getAll("pcn_ids").filter((v) => String(v).trim());
+    if (pcnIds.length === 0) {
+      setError("Select at least one PCN.");
       return;
     }
 
     setError(null);
     setIsPending(true);
-    const formData = new FormData(form);
     try {
       const result =
         mode === "add"
@@ -475,7 +494,7 @@ function ClinicianFormDialog({
               htmlFor={`clinician-type-${mode}`}
               className="mb-1.5 block text-xs font-medium text-slate-600"
             >
-              Clinician type
+              Clinician type <span className="text-destructive">*</span>
             </label>
             <select
               id={`clinician-type-${mode}`}
@@ -494,7 +513,7 @@ function ClinicianFormDialog({
           </div>
           <div>
             <p className="mb-2 text-xs font-medium text-slate-600">
-              Practices
+              Practices <span className="text-destructive">*</span>
             </p>
             {practices.length === 0 ? (
               <p className="text-sm text-slate-600">
@@ -535,7 +554,7 @@ function ClinicianFormDialog({
           </div>
           <div>
             <p className="mb-2 text-xs font-medium text-slate-600">
-              PCNs
+              PCNs <span className="text-destructive">*</span>
             </p>
             {pcns.length === 0 ? (
               <p className="text-sm text-slate-600">

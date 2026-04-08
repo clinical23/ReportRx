@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import {
   Activity,
   BarChart3,
   LayoutDashboard,
   LogOut,
+  Moon,
   Pill,
   Settings,
   Stethoscope,
+  Sun,
 } from "lucide-react";
 
 import { signOut } from "@/app/actions/auth";
@@ -18,8 +22,8 @@ import { cn } from "@/lib/utils";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/activity", label: "Activity", icon: Activity },
-  { href: "/reporting", label: "Reporting", icon: BarChart3 },
+  { href: "/activity", label: "Reporting", icon: BarChart3 },
+  { href: "/reporting", label: "Activity", icon: Activity },
   { href: "/clinicians", label: "Clinicians", icon: Stethoscope },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -38,6 +42,12 @@ export function AppSidebar({
   roleLabel,
 }: Props) {
   const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  const isDark = mounted && theme === "dark";
 
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-slate-800 bg-slate-950">
@@ -69,13 +79,13 @@ export function AppSidebar({
                 "relative mx-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 active
                   ? "bg-slate-800 text-white before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-teal-400"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white",
               )}
             >
               <Icon
                 className={cn(
                   "size-4 shrink-0",
-                  active ? "text-teal-300" : "opacity-80"
+                  active ? "text-teal-300" : "opacity-80",
                 )}
               />
               {label}
@@ -101,6 +111,33 @@ export function AppSidebar({
             </span>
           </div>
         </div>
+
+        {/* Theme toggle */}
+        <button
+          type="button"
+          onClick={() => setTheme(isDark ? "light" : "dark")}
+          className="flex h-9 w-full items-center justify-center gap-2 rounded-lg text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+        >
+          {mounted ? (
+            isDark ? (
+              <>
+                <Sun className="size-4 opacity-70" />
+                Light mode
+              </>
+            ) : (
+              <>
+                <Moon className="size-4 opacity-70" />
+                Dark mode
+              </>
+            )
+          ) : (
+            <>
+              <Moon className="size-4 opacity-70" />
+              Dark mode
+            </>
+          )}
+        </button>
+
         <form action={signOut}>
           <Button
             type="submit"

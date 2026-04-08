@@ -49,10 +49,10 @@ export default async function ActivityPage() {
     <div className="mx-auto max-w-4xl space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
-          Clinical activity log
+          Reporting
         </h1>
         <p className="mt-1 text-sm font-normal text-slate-600">
-          Record appointment categories per clinician, practice and day
+          Log appointments and review recent entries by clinician, practice and day
         </p>
       </div>
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Building2,
   Calendar,
@@ -15,7 +16,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatDateMediumUK, formatRelativeDayLabelUK } from "@/lib/datetime";
+import {
+  formatDateMediumUK,
+  formatRelativeDayLabelUK,
+  todayISOInLondon,
+} from "@/lib/datetime";
 import { getDashboardSnapshot } from "@/lib/supabase/activity";
 import { getAuthProfile } from "@/lib/supabase/auth-profile";
 import { getPracticeScopeIdsForSession } from "@/lib/supabase/practice-scope";
@@ -29,12 +34,14 @@ function StatTile({
   hint,
   icon: Icon,
   accent,
+  href,
 }: {
   label: string;
   value: string;
   hint: string;
   icon: LucideIcon;
   accent: "teal" | "blue" | "violet" | "amber" | "rose" | "emerald";
+  href?: string;
 }) {
   const borders = {
     teal: "border-l-teal-500",
@@ -53,12 +60,14 @@ function StatTile({
     emerald: "text-emerald-600",
   } as const;
 
-  return (
+  const content = (
     <div
       className={cn(
         "relative overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm",
         "border-l-4 pl-5",
-        borders[accent]
+        borders[accent],
+        href &&
+          "transition-all duration-150 hover:shadow-md hover:border-slate-300 hover:-translate-y-0.5 cursor-pointer",
       )}
     >
       <div className="absolute right-4 top-4 opacity-80">
@@ -69,8 +78,22 @@ function StatTile({
         {value}
       </p>
       <p className="mt-3 text-sm font-normal text-slate-600">{hint}</p>
+      {href && (
+        <span className="mt-2 inline-block text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+          View details →
+        </span>
+      )}
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="group">
+        {content}
+      </Link>
+    );
+  }
+  return content;
 }
 
 export default async function DashboardPage() {
@@ -90,6 +113,7 @@ export default async function DashboardPage() {
       hint: "From activity logs (UK calendar month)",
       icon: Calendar,
       accent: "teal" as const,
+      href: "/activity",
     },
     {
       label: "Hours logged this month",
@@ -102,6 +126,7 @@ export default async function DashboardPage() {
       hint: "Unique activity logs in the UK calendar month",
       icon: Clock,
       accent: "blue" as const,
+      href: "/activity",
     },
     {
       label: "Active clinicians this month",
@@ -109,6 +134,7 @@ export default async function DashboardPage() {
       hint: "Clinicians with at least one log entry this month",
       icon: Users,
       accent: "violet" as const,
+      href: "/clinicians",
     },
   ];
 
@@ -125,6 +151,7 @@ export default async function DashboardPage() {
           : "No category data yet",
       icon: Tag,
       accent: "amber" as const,
+      href: "/reporting",
     },
     {
       label: "Most active practice this month",
@@ -138,6 +165,7 @@ export default async function DashboardPage() {
           : "No practice data yet",
       icon: Building2,
       accent: "rose" as const,
+      href: "/reporting",
     },
     {
       label: "Entries logged this month",
@@ -145,6 +173,7 @@ export default async function DashboardPage() {
       hint: "Distinct activity log submissions",
       icon: FileStack,
       accent: "emerald" as const,
+      href: `/activity/day?date=${todayISOInLondon()}`,
     },
   ];
 
@@ -175,10 +204,23 @@ export default async function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Recent activity</CardTitle>
-          <CardDescription>
-            Latest activity log entries (appointments summed per submission).
-          </CardDescription>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="text-base">Recent activity</CardTitle>
+              <CardDescription>
+                Latest activity log entries (appointments summed per
+                submission).
+              </CardDescription>
+            </div>
+            {snap.recentEntries.length > 0 && (
+              <Link
+                href="/activity"
+                className="shrink-0 text-xs font-medium text-primary hover:underline"
+              >
+                View all →
+              </Link>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {snap.recentEntries.length === 0 ? (
@@ -209,8 +251,8 @@ export default async function DashboardPage() {
                     <tr
                       key={e.log_id}
                       className={cn(
-                        "border-b border-slate-100 last:border-0",
-                        i % 2 === 0 ? "bg-white" : "bg-slate-50/80"
+                        "border-b border-slate-100 last:border-0 transition-colors hover:bg-teal-50/40 cursor-pointer",
+                        i % 2 === 0 ? "bg-white" : "bg-slate-50/80",
                       )}
                     >
                       <td className="px-4 py-3 font-medium text-slate-800">
@@ -219,13 +261,18 @@ export default async function DashboardPage() {
                       <td className="px-4 py-3 text-slate-600">
                         {e.practice_name || "—"}
                       </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        <span className="font-medium text-slate-800">
-                          {formatRelativeDayLabelUK(e.log_date)}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-slate-500">
-                          {formatDateMediumUK(e.log_date)}
-                        </span>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/activity/day?date=${e.log_date.slice(0, 10)}`}
+                          className="group/date"
+                        >
+                          <span className="font-medium text-slate-800 group-hover/date:text-primary">
+                            {formatRelativeDayLabelUK(e.log_date)}
+                          </span>
+                          <span className="mt-0.5 block text-xs text-slate-500 group-hover/date:text-primary/70">
+                            {formatDateMediumUK(e.log_date)}
+                          </span>
+                        </Link>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-medium text-slate-800">
                         {e.appointment_total.toLocaleString("en-GB")}

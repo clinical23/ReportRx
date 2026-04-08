@@ -1,6 +1,9 @@
+import Link from "next/link";
+
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -33,7 +36,14 @@ export default function RecentLogs({ logs }: { logs: GroupedRecentLog[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Recent entries</CardTitle>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="text-base">Recent entries</CardTitle>
+            <CardDescription>
+              Click any entry to see the full daily breakdown.
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="p-0 sm:p-0">
         <div className="overflow-x-auto rounded-b-xl">
@@ -41,7 +51,7 @@ export default function RecentLogs({ logs }: { logs: GroupedRecentLog[] }) {
             {logs.map((log, i) => {
               const appointmentTotal = log.entries.reduce(
                 (s, e) => s + e.count,
-                0
+                0,
               );
               const categoryLabel =
                 log.entries.length > 0
@@ -49,42 +59,50 @@ export default function RecentLogs({ logs }: { logs: GroupedRecentLog[] }) {
                       .map((e) =>
                         e.count > 1
                           ? `${e.category_name} (${e.count})`
-                          : e.category_name
+                          : e.category_name,
                       )
                       .join(" · ")
                   : "Uncategorised";
 
               return (
-                <li
-                  key={log.log_id}
-                  className={cn(
-                    "flex flex-col gap-2 px-6 py-4 text-sm sm:flex-row sm:items-center sm:justify-between",
-                    i % 2 === 0 ? "bg-white" : "bg-slate-50/70"
-                  )}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-slate-800">
-                      {categoryLabel}
+                <li key={log.log_id}>
+                  <Link
+                    href={`/activity/day?date=${log.log_date.slice(0, 10)}`}
+                    className={cn(
+                      "flex flex-col gap-2 px-6 py-4 text-sm transition-colors hover:bg-teal-50/50 sm:flex-row sm:items-center sm:justify-between",
+                      i % 2 === 0 ? "bg-white" : "bg-slate-50/70",
+                    )}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-slate-800">
+                        {categoryLabel}
+                      </div>
+                      <div className="mt-0.5 text-xs text-slate-500">
+                        {log.clinician_name || "Unknown clinician"}
+                        {log.practice_name ? ` · ${log.practice_name}` : ""}
+                      </div>
                     </div>
-                    <div className="mt-0.5 text-xs text-slate-500">
-                      {log.clinician_name || "Unknown clinician"}
-                      {log.practice_name ? ` · ${log.practice_name}` : ""}
+                    <div className="flex shrink-0 items-center gap-4 text-left sm:text-right">
+                      <div>
+                        <div className="font-medium text-slate-800">
+                          {formatRelativeDayLabelUK(log.log_date)}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {formatDateMediumUK(log.log_date)}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="inline-flex rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-teal-700 ring-1 ring-teal-200/70">
+                          {appointmentTotal} appt{appointmentTotal !== 1 ? "s" : ""}
+                        </span>
+                        {log.hours_worked != null && log.hours_worked > 0 ? (
+                          <span className="text-[11px] tabular-nums text-slate-400">
+                            {log.hours_worked}h
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                  <div className="shrink-0 text-left sm:text-right">
-                    <div className="font-medium text-slate-800">
-                      {formatRelativeDayLabelUK(log.log_date)}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      {formatDateMediumUK(log.log_date)}
-                    </div>
-                    <div className="mt-1 text-xs tabular-nums text-slate-600">
-                      {appointmentTotal} appts
-                      {log.hours_worked != null && log.hours_worked > 0
-                        ? ` · ${log.hours_worked} hrs`
-                        : ""}
-                    </div>
-                  </div>
+                  </Link>
                 </li>
               );
             })}

@@ -1,9 +1,14 @@
 "use client";
 
+import Link from "next/link";
+import { useMemo } from "react";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -24,18 +29,290 @@ import type {
 } from "@/lib/supabase/activity";
 import { formatMonthLabelUK } from "@/lib/datetime";
 
-const BAR_FILLS = [
-  "hsl(173, 80%, 36%)",
-  "hsl(199, 89%, 48%)",
-  "hsl(38, 92%, 50%)",
-] as const;
-const GRID = "hsl(214, 32%, 91%)";
-const AXIS_TICK = "hsl(215, 16%, 47%)";
+/* ------------------------------------------------------------------ */
+/*  Palette                                                            */
+/* ------------------------------------------------------------------ */
 
-function trimLabel(s: string, max = 24) {
+const CHART_THEMES = [
+  {
+    id: "category",
+    gradient: ["hsl(173 80% 40%)", "hsl(173 80% 28%)"],
+    accent: "hsl(173 80% 36%)",
+    glow: "hsl(173 80% 60% / 0.25)",
+    bg: "hsl(173 60% 97%)",
+  },
+  {
+    id: "clinician",
+    gradient: ["hsl(199 89% 52%)", "hsl(199 89% 38%)"],
+    accent: "hsl(199 89% 48%)",
+    glow: "hsl(199 89% 60% / 0.25)",
+    bg: "hsl(199 60% 97%)",
+  },
+  {
+    id: "practice",
+    gradient: ["hsl(262 83% 58%)", "hsl(262 83% 44%)"],
+    accent: "hsl(262 83% 54%)",
+    glow: "hsl(262 83% 64% / 0.25)",
+    bg: "hsl(262 60% 97%)",
+  },
+] as const;
+
+const AXIS_TICK = "hsl(215 16% 57%)";
+const GRID_COLOR = "hsl(214 32% 93%)";
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function trimLabel(s: string, max = 20) {
   if (s.length <= max) return s;
   return `${s.slice(0, max - 1)}…`;
 }
+
+function sumField(data: { count: number }[]) {
+  return data.reduce((s, d) => s + d.count, 0);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Custom tooltip                                                     */
+/* ------------------------------------------------------------------ */
+
+function ChartTooltip({
+  active,
+  payload,
+  accentColor,
+}: {
+  active?: boolean;
+  payload?: { payload?: { name?: string; count?: number } }[];
+  accentColor: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload;
+  if (!row) return null;
+
+  return (
+    <div
+      className="rounded-xl border border-slate-200/60 bg-white/90 px-4 py-3 shadow-xl backdrop-blur-md"
+      style={{ minWidth: 140 }}
+    >
+      <p className="mb-1 text-xs font-medium text-slate-500 leading-tight">
+        {row.name}
+      </p>
+      <p className="text-xl font-bold tracking-tight" style={{ color: accentColor }}>
+        {(row.count ?? 0).toLocaleString("en-GB")}
+      </p>
+      <p className="text-[10px] font-medium uppercase tracking-widest text-slate-400">
+        appointments
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  KPI pill                                                           */
+/* ------------------------------------------------------------------ */
+
+function KpiRow({
+  total,
+  count,
+  accentColor,
+  bg,
+}: {
+  total: number;
+  count: number;
+  accentColor: string;
+  bg: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 pb-1">
+      <span
+        className="inline-flex items-baseline gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+        style={{ backgroundColor: bg, color: accentColor }}
+      >
+        <span className="text-base font-bold tabular-nums">
+          {total.toLocaleString("en-GB")}
+        </span>
+        total
+      </span>
+      <span className="text-xs text-slate-400">
+        across {count} {count === 1 ? "item" : "items"}
+      </span>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Sparkline area chart for trend (used inside summary cards)         */
+/* ------------------------------------------------------------------ */
+
+type SparkDatum = { label: string; count: number };
+
+function SparkArea({
+  data,
+  gradientId,
+  color,
+}: {
+  data: SparkDatum[];
+  gradientId: string;
+  color: string;
+}) {
+  if (data.length < 2) return null;
+  return (
+    <div className="h-12 w-full opacity-80">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+              <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <Area
+            type="monotone"
+            dataKey="count"
+            stroke={color}
+            strokeWidth={1.5}
+            fill={`url(#${gradientId})`}
+            isAnimationActive={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main chart card                                                    */
+/* ------------------------------------------------------------------ */
+
+function ChartCard({
+  title,
+  description,
+  data,
+  empty,
+  theme,
+}: {
+  title: string;
+  description: string;
+  data: { name: string; label: string; count: number }[];
+  empty: boolean;
+  theme: (typeof CHART_THEMES)[number];
+}) {
+  const total = useMemo(() => sumField(data), [data]);
+  const gradId = `bar-grad-${theme.id}`;
+  const max = useMemo(
+    () => Math.max(...data.map((d) => d.count), 0),
+    [data],
+  );
+
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="text-[15px]">{title}</CardTitle>
+            <CardDescription className="mt-0.5">{description}</CardDescription>
+          </div>
+          {!empty && (
+            <SparkArea
+              data={data}
+              gradientId={`spark-${theme.id}`}
+              color={theme.accent}
+            />
+          )}
+        </div>
+        {!empty && (
+          <KpiRow
+            total={total}
+            count={data.length}
+            accentColor={theme.accent}
+            bg={theme.bg}
+          />
+        )}
+      </CardHeader>
+      <CardContent className="h-[340px] w-full pt-0">
+        {empty ? (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-sm text-slate-400">
+              No appointments in this range.
+            </p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={data}
+              margin={{ top: 4, right: 4, left: -8, bottom: 56 }}
+              barCategoryGap="18%"
+            >
+              <defs>
+                <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={theme.gradient[0]} stopOpacity={0.95} />
+                  <stop offset="100%" stopColor={theme.gradient[1]} stopOpacity={0.85} />
+                </linearGradient>
+                <filter id={`glow-${theme.id}`}>
+                  <feGaussianBlur stdDeviation="4" result="blur" />
+                  <feFlood floodColor={theme.glow} result="color" />
+                  <feComposite in="color" in2="blur" operator="in" result="shadow" />
+                  <feMerge>
+                    <feMergeNode in="shadow" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <CartesianGrid
+                stroke={GRID_COLOR}
+                strokeDasharray="4 4"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 11, fill: AXIS_TICK, fontWeight: 500 }}
+                interval={0}
+                angle={-40}
+                textAnchor="end"
+                height={64}
+                tickLine={false}
+                axisLine={{ stroke: GRID_COLOR }}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: AXIS_TICK, fontWeight: 500 }}
+                allowDecimals={false}
+                tickLine={false}
+                axisLine={false}
+                width={40}
+              />
+              <Tooltip
+                cursor={{ fill: theme.glow, radius: 4 }}
+                content={<ChartTooltip accentColor={theme.accent} />}
+              />
+              <Bar
+                dataKey="count"
+                name="Appointments"
+                fill={`url(#${gradId})`}
+                radius={[6, 6, 0, 0]}
+                maxBarSize={52}
+                animationDuration={800}
+                animationEasing="ease-out"
+                filter={`url(#glow-${theme.id})`}
+              >
+                {data.map((entry, idx) => (
+                  <Cell
+                    key={`cell-${idx}`}
+                    fillOpacity={max > 0 ? 0.55 + 0.45 * (entry.count / max) : 1}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Page                                                               */
+/* ------------------------------------------------------------------ */
 
 type Props = {
   initialFrom: string;
@@ -63,23 +340,37 @@ export function ReportingClient({
     label: trimLabel(d.name),
   }));
 
+  const grandTotal =
+    sumField(charts.byCategory) +
+    sumField(charts.byClinician) +
+    sumField(charts.byPractice);
+
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
-          Reporting
-        </h1>
-        <p className="mt-1 text-sm font-normal text-slate-600">
-          Appointment activity across your PCN
-        </p>
+      {/* Header */}
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
+            Activity
+          </h1>
+          <p className="mt-1 text-sm font-normal text-slate-500">
+            Appointment activity across your PCN
+          </p>
+        </div>
+        {grandTotal > 0 && (
+          <p className="text-xs tabular-nums text-slate-400">
+            {(grandTotal / 3).toLocaleString("en-GB")} total appointments in
+            range
+          </p>
+        )}
       </div>
 
+      {/* Date range filter */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Date range</CardTitle>
+          <CardTitle className="text-[15px]">Date range</CardTitle>
           <CardDescription>
-            Defaults to the current calendar month (UK). Apply to refresh charts
-            and the summary table.
+            Defaults to the current calendar month (UK). Apply to refresh.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -101,7 +392,7 @@ export function ReportingClient({
                 type="date"
                 required
                 defaultValue={initialFrom}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm transition-shadow focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div className="grid gap-1.5">
@@ -117,7 +408,7 @@ export function ReportingClient({
                 type="date"
                 required
                 defaultValue={initialTo}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm transition-shadow focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <Button type="submit" className="self-end sm:self-auto">
@@ -127,58 +418,63 @@ export function ReportingClient({
         </CardContent>
       </Card>
 
+      {/* Charts */}
       <div className="grid gap-6 lg:grid-cols-1">
         <ChartCard
           title="Appointments by category"
-          description="Total appointments in range, by category"
+          description="Breakdown by activity category"
           data={catData}
           empty={charts.byCategory.length === 0}
-          barFill={BAR_FILLS[0]}
+          theme={CHART_THEMES[0]}
         />
         <ChartCard
           title="Appointments by clinician"
-          description="Total appointments in range, by clinician"
+          description="Breakdown by individual clinician"
           data={clinData}
           empty={charts.byClinician.length === 0}
-          barFill={BAR_FILLS[1]}
+          theme={CHART_THEMES[1]}
         />
         <ChartCard
           title="Appointments by practice"
-          description="Total appointments in range, by practice"
+          description="Breakdown by practice location"
           data={prData}
           empty={charts.byPractice.length === 0}
-          barFill={BAR_FILLS[2]}
+          theme={CHART_THEMES[2]}
         />
       </div>
 
+      {/* Summary table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Summary by month</CardTitle>
+          <CardTitle className="text-[15px]">Summary by month</CardTitle>
           <CardDescription>
-            Clinician, practice, month, appointments and hours (hours counted once
-            per log entry).
+            Clinician, practice, month, appointments and hours.
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {table.length === 0 ? (
-            <p className="text-sm text-slate-600">No data in this date range.</p>
+            <div className="flex h-24 items-center justify-center">
+              <p className="text-sm text-slate-400">
+                No data in this date range.
+              </p>
+            </div>
           ) : (
             <table className="w-full min-w-[40rem] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-100 text-left">
-                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-left">
+                  <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                     Clinician
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                     Practice
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                     Month
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                     Appointments
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                     Hours
                   </th>
                 </tr>
@@ -189,21 +485,31 @@ export function ReportingClient({
                     key={`${row.clinician_name}-${row.practice_name}-${row.month_key}-${i}`}
                     className={
                       i % 2 === 0
-                        ? "border-b border-slate-100 bg-white"
-                        : "border-b border-slate-100 bg-slate-50/80"
+                        ? "border-b border-slate-100/80 bg-white transition-colors hover:bg-slate-50/60"
+                        : "border-b border-slate-100/80 bg-slate-50/40 transition-colors hover:bg-slate-50/80"
                     }
                   >
                     <td className="px-4 py-3 font-medium text-slate-800">
                       {row.clinician_name}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{row.practice_name}</td>
                     <td className="px-4 py-3 text-slate-600">
-                      {formatMonthLabelUK(row.month_key)}
+                      {row.practice_name}
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-slate-800">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/activity/day?date=${row.month_key}-01`}
+                        className="font-medium text-slate-600 hover:text-primary"
+                      >
+                        {formatMonthLabelUK(row.month_key)}
+                        <span className="ml-1 text-[10px] text-slate-400 group-hover:text-primary">
+                          →
+                        </span>
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums font-medium text-slate-800">
                       {row.appointments.toLocaleString("en-GB")}
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-slate-600">
+                    <td className="px-4 py-3 text-right tabular-nums text-slate-500">
                       {row.hours > 0
                         ? row.hours.toLocaleString("en-GB", {
                             maximumFractionDigits: 1,
@@ -218,85 +524,5 @@ export function ReportingClient({
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function ChartCard({
-  title,
-  description,
-  data,
-  empty,
-  barFill,
-}: {
-  title: string;
-  description: string;
-  data: { name: string; label: string; count: number }[];
-  empty: boolean;
-  barFill: string;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="h-[320px] w-full pt-2">
-        {empty ? (
-          <p className="text-sm text-slate-600">No appointments in this range.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              margin={{ top: 8, right: 8, left: 0, bottom: 64 }}
-            >
-              <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: AXIS_TICK }}
-                interval={0}
-                angle={-35}
-                textAnchor="end"
-                height={70}
-              />
-              <YAxis
-                tick={{ fontSize: 11, fill: AXIS_TICK }}
-                allowDecimals={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: "0.75rem",
-                  border: "1px solid hsl(214, 32%, 91%)",
-                  fontSize: "12px",
-                  boxShadow: "0 4px 14px -2px rgb(15 23 42 / 0.08)",
-                }}
-                formatter={(value) => {
-                  const n =
-                    typeof value === "number"
-                      ? value
-                      : Number(value);
-                  return [
-                    Number.isFinite(n) ? n.toLocaleString("en-GB") : "0",
-                    "Appointments",
-                  ];
-                }}
-                labelFormatter={(_label, payload) => {
-                  const row = payload?.[0]?.payload as
-                    | { name?: string }
-                    | undefined;
-                  return row?.name ?? "";
-                }}
-              />
-              <Bar
-                dataKey="count"
-                name="Appointments"
-                fill={barFill}
-                radius={[4, 4, 0, 0]}
-                maxBarSize={48}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
   );
 }

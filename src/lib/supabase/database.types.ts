@@ -568,11 +568,15 @@ export interface Database {
           log_id: string;
           log_date: string;
           hours_worked: number | null;
+          clinician_id: string;
           clinician_name: string;
+          clinician_role: string;
+          practice_id: string;
           practice_name: string;
+          pcn_name: string | null;
+          category_id: string;
           category_name: string;
           appointment_count: number;
-          practice_id: string;
         };
         Relationships: [];
       };

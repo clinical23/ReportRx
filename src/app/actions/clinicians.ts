@@ -66,11 +66,17 @@ export async function addClinicianAction(
 
   const role = "Clinician";
   const clinician_type_id = parseClinicianTypeId(formData);
+  if (!clinician_type_id) {
+    return { ok: false, error: "Clinician type is required." };
+  }
   const practice_ids = parsePracticeIds(formData);
   const pcn_ids = parsePcnIds(formData);
 
   if (practice_ids.length === 0) {
-    return { ok: false, error: "Link at least one practice." };
+    return { ok: false, error: "Select at least one practice." };
+  }
+  if (pcn_ids.length === 0) {
+    return { ok: false, error: "Select at least one PCN." };
   }
 
   if (auth.profile.practice_id) {
@@ -122,11 +128,17 @@ export async function updateClinicianAction(
 
   const role = "Clinician";
   const clinician_type_id = parseClinicianTypeId(formData);
+  if (!clinician_type_id) {
+    return { ok: false, error: "Clinician type is required." };
+  }
   const practice_ids = parsePracticeIds(formData);
   const pcn_ids = parsePcnIds(formData);
 
   if (practice_ids.length === 0) {
-    return { ok: false, error: "Link at least one practice." };
+    return { ok: false, error: "Select at least one practice." };
+  }
+  if (pcn_ids.length === 0) {
+    return { ok: false, error: "Select at least one PCN." };
   }
 
   if (auth.profile.practice_id) {

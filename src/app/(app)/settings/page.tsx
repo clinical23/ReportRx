@@ -5,10 +5,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PcnsSettingsSection } from "@/components/settings/pcns-settings-section";
-import { Separator } from "@/components/ui/separator";
+import { SettingsClient } from "@/components/settings/settings-client";
 import { getAuthProfile } from "@/lib/supabase/auth-profile";
-import { listPcns } from "@/lib/supabase/data";
+import { listPcns, listPracticesWithPcn } from "@/lib/supabase/data";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +16,10 @@ export default async function SettingsPage() {
   const session = await getAuthProfile();
   const profile = session?.profile;
 
-  const pcns = await listPcns();
+  const [pcns, practices] = await Promise.all([
+    listPcns(),
+    listPracticesWithPcn(),
+  ]);
 
   let practiceName = "Not linked to a practice";
   if (profile?.practice_id) {
@@ -31,78 +33,46 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-800 dark:text-slate-100">
           Settings
         </h1>
-        <p className="mt-1 text-sm font-normal text-slate-500">
-          Practice preferences and workspace defaults.
+        <p className="mt-1 text-sm font-normal text-slate-500 dark:text-slate-400">
+          Practice preferences and workspace configuration.
         </p>
       </div>
+
+      {/* Practice info (read-only for now) */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Practice</CardTitle>
+          <CardTitle className="text-base">Your practice</CardTitle>
           <CardDescription>
-            Display name and timezone used across the app.
+            Your linked practice and timezone.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-2">
-            <label className="text-xs font-medium text-slate-600">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
               Practice name
             </label>
-            <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-800">
+            <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
               {practiceName}
             </div>
           </div>
-          <Separator className="bg-slate-200" />
           <div className="grid gap-2">
-            <label className="text-xs font-medium text-slate-600">
+            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
               Timezone
             </label>
-            <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-800">
+            <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
               Europe/London (UK)
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">PCNs</CardTitle>
-          <CardDescription>
-            Primary Care Networks used when assigning clinicians. Deleting a PCN
-            removes it from the list and unlinks it from any clinicians.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <PcnsSettingsSection
-            initialPcns={pcns}
-            practiceName={
-              profile?.practice_id &&
-              practiceName !== "Not linked to a practice"
-                ? practiceName
-                : null
-            }
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Notifications</CardTitle>
-          <CardDescription>
-            Email summaries and report deadlines.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-slate-600">
-            Notification toggles can be wired to your backend or a provider
-            later; this panel matches the layout you will extend.
-          </p>
-        </CardContent>
-      </Card>
+      {/* PCN + Practice management */}
+      <SettingsClient initialPcns={pcns} initialPractices={practices} />
     </div>
   );
 }
