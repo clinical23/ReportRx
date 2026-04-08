@@ -167,6 +167,7 @@ export interface Database {
           role: string;
           created_at: string;
           pcn_name: string | null;
+          clinician_type_id: string | null;
         };
         Insert: {
           id?: string;
@@ -174,6 +175,7 @@ export interface Database {
           role?: string;
           created_at?: string;
           pcn_name?: string | null;
+          clinician_type_id?: string | null;
         };
         Update: {
           id?: string;
@@ -181,8 +183,17 @@ export interface Database {
           role?: string;
           created_at?: string;
           pcn_name?: string | null;
+          clinician_type_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "clinicians_clinician_type_id_fkey";
+            columns: ["clinician_type_id"];
+            isOneToOne: false;
+            referencedRelation: "clinician_types";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       profiles: {
         Row: {
@@ -349,6 +360,203 @@ export interface Database {
             columns: ["category_id"];
             isOneToOne: false;
             referencedRelation: "activity_categories";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      activity_flags: {
+        Row: {
+          id: string;
+          log_id: string;
+          flagged_by: string;
+          reason: string;
+          status: string;
+          resolved_by: string | null;
+          resolution_note: string | null;
+          created_at: string;
+          resolved_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          log_id: string;
+          flagged_by: string;
+          reason: string;
+          status?: string;
+          resolved_by?: string | null;
+          resolution_note?: string | null;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          log_id?: string;
+          flagged_by?: string;
+          reason?: string;
+          status?: string;
+          resolved_by?: string | null;
+          resolution_note?: string | null;
+          created_at?: string;
+          resolved_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "activity_flags_log_id_fkey";
+            columns: ["log_id"];
+            isOneToOne: false;
+            referencedRelation: "activity_logs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "activity_flags_flagged_by_fkey";
+            columns: ["flagged_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "activity_flags_resolved_by_fkey";
+            columns: ["resolved_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      clinician_types: {
+        Row: {
+          id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      permissions: {
+        Row: {
+          id: string;
+          key: string;
+          description: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          key: string;
+          description?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          key?: string;
+          description?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      roles: {
+        Row: {
+          id: string;
+          name: string;
+          category: string;
+          description: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          category: string;
+          description?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          category?: string;
+          description?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      role_permissions: {
+        Row: {
+          role_id: string;
+          permission_id: string;
+        };
+        Insert: {
+          role_id: string;
+          permission_id: string;
+        };
+        Update: {
+          role_id?: string;
+          permission_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_role_id_fkey";
+            columns: ["role_id"];
+            isOneToOne: false;
+            referencedRelation: "roles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey";
+            columns: ["permission_id"];
+            isOneToOne: false;
+            referencedRelation: "permissions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      user_roles: {
+        Row: {
+          id: string;
+          profile_id: string;
+          role_id: string;
+          assigned_at: string;
+          assigned_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          role_id: string;
+          assigned_at?: string;
+          assigned_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          role_id?: string;
+          assigned_at?: string;
+          assigned_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "user_roles_role_id_fkey";
+            columns: ["role_id"];
+            isOneToOne: false;
+            referencedRelation: "roles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "user_roles_assigned_by_fkey";
+            columns: ["assigned_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
