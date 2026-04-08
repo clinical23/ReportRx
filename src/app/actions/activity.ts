@@ -24,17 +24,6 @@ export type SaveActivityLogResult =
   | { success: true; log_id: string }
   | { success: false; error: string }
 
-async function resolveClinicianIdForProfile(
-  fullName: string,
-): Promise<string | null> {
-  const supabase = await createClient()
-  const { data: list } = await supabase.from('clinicians').select('id, name')
-  const match = (list ?? []).find(
-    (c) => c.name.trim() === fullName.trim(),
-  )
-  return match?.id ?? null
-}
-
 async function clinicianHasPracticeLink(
   clinicianId: string,
   practiceId: string,
@@ -67,8 +56,10 @@ export async function saveActivityLog(
       return { success: false, error: 'Unauthorized' }
     }
   } else if (profile.role === 'clinician') {
-    const myClinicianId = await resolveClinicianIdForProfile(profile.full_name)
-    if (myClinicianId !== input.clinician_id) {
+    if (
+      !profile.clinician_id ||
+      profile.clinician_id !== input.clinician_id
+    ) {
       return { success: false, error: 'Unauthorized' }
     }
     const sameAsProfilePractice =

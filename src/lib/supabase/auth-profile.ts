@@ -7,9 +7,12 @@ export type AppRole = "clinician" | "practice_manager" | "pcn_manager";
 
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
+/** Authenticated user profile row (includes optional link to clinicians.id). */
+export type AuthProfile = ProfileRow;
+
 export type AuthSession = {
   user: User;
-  profile: ProfileRow | null;
+  profile: AuthProfile | null;
 };
 
 export async function getAuthProfile(): Promise<AuthSession | null> {

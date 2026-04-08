@@ -35,11 +35,9 @@ export default async function ActivityPage() {
   let clinicianRecordId: string | null = null
   let clinicianDisplayName = profile?.full_name ?? 'Clinician'
 
-  if (isClinician && profile) {
-    const match = clinicians.find(
-      (c) => c.name.trim() === profile.full_name.trim(),
-    )
-    clinicianRecordId = match?.id ?? null
+  if (isClinician && profile?.clinician_id) {
+    const match = clinicians.find((c) => c.id === profile.clinician_id)
+    clinicianRecordId = match?.id ?? profile.clinician_id
     if (match) {
       clinicianDisplayName = match.name
     }

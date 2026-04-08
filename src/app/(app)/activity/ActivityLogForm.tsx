@@ -94,7 +94,7 @@ export default function ActivityLogForm({
       if (!cid) {
         setMessage({
           type: 'error',
-          text: 'Your account is not linked to a clinician with the same name in the directory. Contact an administrator.',
+          text: 'Your account is not linked to a clinician record (profiles.clinician_id). Contact an administrator.',
         })
         return
       }
@@ -189,12 +189,6 @@ export default function ActivityLogForm({
           {message.text}
         </div>
       )}
-
-      {clinicianLocked && !canSaveSingle ? (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          No clinician record matches your profile name ({clinicianDisplayName}). An administrator must add you to the clinicians list or align your profile name.
-        </div>
-      ) : null}
 
       {tab === 'single' && (
         <div className="rounded-xl border border-border bg-card p-5 shadow-stripe">

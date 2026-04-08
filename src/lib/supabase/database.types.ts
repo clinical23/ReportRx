@@ -190,17 +190,20 @@ export interface Database {
           role: string;
           full_name: string;
           practice_id: string | null;
+          clinician_id: string | null;
         };
         Insert: {
           id: string;
           role: string;
           full_name: string;
           practice_id?: string | null;
+          clinician_id?: string | null;
         };
         Update: {
           role?: string;
           full_name?: string;
           practice_id?: string | null;
+          clinician_id?: string | null;
         };
         Relationships: [
           {
@@ -208,6 +211,13 @@ export interface Database {
             columns: ["practice_id"];
             isOneToOne: false;
             referencedRelation: "practices";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profiles_clinician_id_fkey";
+            columns: ["clinician_id"];
+            isOneToOne: true;
+            referencedRelation: "clinicians";
             referencedColumns: ["id"];
           },
         ];
