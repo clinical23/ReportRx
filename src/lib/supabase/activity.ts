@@ -2,8 +2,6 @@ import {
   isIsoDateInLondonMonth,
   isIsoDateInRange,
 } from '@/lib/datetime'
-import { getAuthProfile } from '@/lib/supabase/auth-profile'
-import { getPracticeScopeIdsForSession } from '@/lib/supabase/practice-scope'
 import { createClient } from '@/lib/supabase/server'
 
 export type Practice = {
@@ -18,12 +16,7 @@ export type ActivityCategory = {
   sort_order: number
 }
 
-export type ActivityLogEntry = {
-  category_id: string
-  count: number
-}
-
-export type RecentLogRow = {
+type RecentLogRow = {
   log_id: string
   log_date: string
   hours_worked: number | null
@@ -117,7 +110,7 @@ export async function listRecentLogsGrouped(
   return Array.from(map.values()).slice(0, limit)
 }
 
-export type DashboardActivityStats = {
+type DashboardActivityStats = {
   appointmentsThisMonth: number
   hoursThisMonth: number
   activeCliniciansThisMonth: number
@@ -300,18 +293,6 @@ export async function getDashboardSnapshot(
     topPracticeAppointments,
     entriesThisMonth: logIdsThisMonth.size,
     recentEntries: recentFixed,
-  }
-}
-
-/** @deprecated Prefer {@link getDashboardSnapshot} */
-export async function getDashboardActivityStats(): Promise<DashboardActivityStats> {
-  const session = await getAuthProfile()
-  const scope = await getPracticeScopeIdsForSession(session)
-  const s = await getDashboardSnapshot(scope)
-  return {
-    appointmentsThisMonth: s.appointmentsThisMonth,
-    hoursThisMonth: s.hoursThisMonth,
-    activeCliniciansThisMonth: s.activeCliniciansThisMonth,
   }
 }
 
