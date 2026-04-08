@@ -2,6 +2,8 @@ import {
   isIsoDateInLondonMonth,
   isIsoDateInRange,
 } from '@/lib/datetime'
+import { getAuthProfile } from '@/lib/supabase/auth-profile'
+import { getPracticeScopeIdsForSession } from '@/lib/supabase/practice-scope'
 import { createClient } from '@/lib/supabase/server'
 
 export type Practice = {
@@ -52,11 +54,18 @@ export async function listActivityCategories(): Promise<ActivityCategory[]> {
   return data ?? []
 }
 
-export async function listRecentLogs(limit = 20): Promise<RecentLogRow[]> {
+export async function listRecentLogs(
+  limit = 20,
+  practiceScopeIds: string[],
+): Promise<RecentLogRow[]> {
+  if (practiceScopeIds.length === 0) {
+    return []
+  }
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('activity_report')
     .select('*')
+    .in('practice_id', practiceScopeIds)
     .limit(limit)
   if (error) { console.error('[listRecentLogs]', error.message); return [] }
   const rows = data ?? []
@@ -72,8 +81,11 @@ export async function listRecentLogs(limit = 20): Promise<RecentLogRow[]> {
   }))
 }
 
-export async function listRecentLogsGrouped(limit = 10) {
-  const rows = await listRecentLogs(limit * 8)
+export async function listRecentLogsGrouped(
+  limit = 10,
+  practiceScopeIds: string[],
+) {
+  const rows = await listRecentLogs(limit * 8, practiceScopeIds)
   const map = new Map<string, {
     log_id: string
     log_date: string
@@ -156,8 +168,11 @@ function normalizeRows(data: unknown[]): ReportRow[] {
 
 /**
  * Full dashboard metrics + recent activity from activity_report (UK calendar month).
+ * @param practiceScopeIds Practices the current user may aggregate (see getPracticeScopeIdsForSession).
  */
-export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
+export async function getDashboardSnapshot(
+  practiceScopeIds: string[],
+): Promise<DashboardSnapshot> {
   const empty: DashboardSnapshot = {
     appointmentsThisMonth: 0,
     hoursThisMonth: 0,
@@ -170,8 +185,15 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
     recentEntries: [],
   }
 
+  if (practiceScopeIds.length === 0) {
+    return empty
+  }
+
   const supabase = await createClient()
-  const { data, error } = await supabase.from('activity_report').select('*')
+  const { data, error } = await supabase
+    .from('activity_report')
+    .select('*')
+    .in('practice_id', practiceScopeIds)
 
   if (error) {
     console.error('[getDashboardSnapshot]', error.message)
@@ -283,7 +305,9 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
 
 /** @deprecated Prefer {@link getDashboardSnapshot} */
 export async function getDashboardActivityStats(): Promise<DashboardActivityStats> {
-  const s = await getDashboardSnapshot()
+  const session = await getAuthProfile()
+  const scope = await getPracticeScopeIdsForSession(session)
+  const s = await getDashboardSnapshot(scope)
   return {
     appointmentsThisMonth: s.appointmentsThisMonth,
     hoursThisMonth: s.hoursThisMonth,
@@ -308,9 +332,16 @@ export type ReportingTableRow = {
 export async function getReportingChartsData(
   from: string,
   to: string,
+  practiceScopeIds: string[],
 ): Promise<ReportingChartsData> {
+  if (practiceScopeIds.length === 0) {
+    return { byCategory: [], byClinician: [], byPractice: [] }
+  }
   const supabase = await createClient()
-  const { data, error } = await supabase.from('activity_report').select('*')
+  const { data, error } = await supabase
+    .from('activity_report')
+    .select('*')
+    .in('practice_id', practiceScopeIds)
   if (error) {
     console.error('[getReportingChartsData]', error.message)
     return { byCategory: [], byClinician: [], byPractice: [] }
@@ -347,9 +378,16 @@ export async function getReportingChartsData(
 export async function getReportingTable(
   from: string,
   to: string,
+  practiceScopeIds: string[],
 ): Promise<ReportingTableRow[]> {
+  if (practiceScopeIds.length === 0) {
+    return []
+  }
   const supabase = await createClient()
-  const { data, error } = await supabase.from('activity_report').select('*')
+  const { data, error } = await supabase
+    .from('activity_report')
+    .select('*')
+    .in('practice_id', practiceScopeIds)
   if (error) {
     console.error('[getReportingTable]', error.message)
     return []

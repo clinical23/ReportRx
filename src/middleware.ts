@@ -8,7 +8,10 @@ export async function middleware(request: NextRequest) {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) {
-    return supabaseResponse;
+    return new NextResponse(
+      "Server configuration error: missing Supabase environment variables.",
+      { status: 500 },
+    );
   }
 
   const supabase = createServerClient(url, anonKey, {

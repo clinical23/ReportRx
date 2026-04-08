@@ -3,6 +3,8 @@ import {
   getReportingChartsData,
   getReportingTable,
 } from "@/lib/supabase/activity";
+import { getAuthProfile } from "@/lib/supabase/auth-profile";
+import { getPracticeScopeIdsForSession } from "@/lib/supabase/practice-scope";
 
 import { ReportingLoader } from "./reporting-loader";
 
@@ -25,9 +27,12 @@ export default async function ReportingPage({
     to = t;
   }
 
+  const session = await getAuthProfile();
+  const scope = await getPracticeScopeIdsForSession(session);
+
   const [charts, table] = await Promise.all([
-    getReportingChartsData(from, to),
-    getReportingTable(from, to),
+    getReportingChartsData(from, to, scope),
+    getReportingTable(from, to, scope),
   ]);
 
   return (

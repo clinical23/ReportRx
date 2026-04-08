@@ -7,15 +7,15 @@ import {
 } from "@/components/ui/card";
 import { getDashboardSnapshot } from "@/lib/supabase/activity";
 import { getAuthProfile } from "@/lib/supabase/auth-profile";
+import { getPracticeScopeIdsForSession } from "@/lib/supabase/practice-scope";
 import { formatDateMediumUK } from "@/lib/datetime";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [session, snap] = await Promise.all([
-    getAuthProfile(),
-    getDashboardSnapshot(),
-  ]);
+  const session = await getAuthProfile();
+  const scope = await getPracticeScopeIdsForSession(session);
+  const snap = await getDashboardSnapshot(scope);
 
   const firstName =
     session?.profile?.full_name?.trim().split(/\s+/)[0] ??

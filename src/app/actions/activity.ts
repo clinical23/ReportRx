@@ -1,7 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+
+import { requireProfileSession } from '@/lib/supabase/action-session'
 import { createClient } from '@/lib/supabase/server'
+import { isAppRole } from '@/lib/supabase/auth-profile'
 
 export type CategoryEntry = {
   category_id: string
@@ -21,9 +24,67 @@ export type SaveActivityLogResult =
   | { success: true; log_id: string }
   | { success: false; error: string }
 
+async function resolveClinicianIdForProfile(
+  fullName: string,
+): Promise<string | null> {
+  const supabase = await createClient()
+  const { data: list } = await supabase.from('clinicians').select('id, name')
+  const match = (list ?? []).find(
+    (c) => c.name.trim() === fullName.trim(),
+  )
+  return match?.id ?? null
+}
+
+async function clinicianHasPracticeLink(
+  clinicianId: string,
+  practiceId: string,
+): Promise<boolean> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('clinician_practices')
+    .select('practice_id')
+    .eq('clinician_id', clinicianId)
+    .eq('practice_id', practiceId)
+    .maybeSingle()
+  return data != null
+}
+
 export async function saveActivityLog(
-  input: SaveActivityLogInput
+  input: SaveActivityLogInput,
 ): Promise<SaveActivityLogResult> {
+  const auth = await requireProfileSession()
+  if ('error' in auth) {
+    return { success: false, error: auth.error }
+  }
+
+  const { profile } = auth
+  if (!isAppRole(profile.role)) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
+  if (profile.role === 'practice_manager') {
+    if (!profile.practice_id || profile.practice_id !== input.practice_id) {
+      return { success: false, error: 'Unauthorized' }
+    }
+  } else if (profile.role === 'clinician') {
+    const myClinicianId = await resolveClinicianIdForProfile(profile.full_name)
+    if (myClinicianId !== input.clinician_id) {
+      return { success: false, error: 'Unauthorized' }
+    }
+    const sameAsProfilePractice =
+      profile.practice_id != null &&
+      profile.practice_id === input.practice_id
+    const linked = await clinicianHasPracticeLink(
+      input.clinician_id,
+      input.practice_id,
+    )
+    if (!sameAsProfilePractice && !linked) {
+      return { success: false, error: 'Unauthorized' }
+    }
+  } else {
+    return { success: false, error: 'Unauthorized' }
+  }
+
   const supabase = await createClient()
   const nonZeroEntries = input.entries.filter((e) => e.count > 0)
   if (nonZeroEntries.length === 0) {
@@ -82,8 +143,20 @@ export type BulkSaveInput = {
 }
 
 export async function bulkSaveActivityLogs(
-  input: BulkSaveInput
+  input: BulkSaveInput,
 ): Promise<{ success: true; count: number } | { success: false; error: string }> {
+  const auth = await requireProfileSession()
+  if ('error' in auth) {
+    return { success: false, error: auth.error }
+  }
+  if (
+    auth.profile.role !== 'practice_manager' ||
+    !auth.profile.practice_id ||
+    auth.profile.practice_id !== input.practice_id
+  ) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
   if (input.clinician_ids.length === 0) {
     return { success: false, error: 'Select at least one clinician.' }
   }
@@ -106,14 +179,25 @@ export async function bulkSaveActivityLogs(
 }
 
 export async function addActivityCategory(
-  name: string
+  name: string,
 ): Promise<{ success: boolean; error?: string }> {
+  const auth = await requireProfileSession()
+  if ('error' in auth) {
+    return { success: false, error: auth.error }
+  }
+  if (
+    auth.profile.role !== 'practice_manager' ||
+    !auth.profile.practice_id
+  ) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
   const trimmed = name.trim()
   if (!trimmed) return { success: false, error: 'Category name cannot be empty.' }
   const supabase = await createClient()
   const { error } = await supabase
     .from('activity_categories')
-    .insert({ name: trimmed })
+    .insert({ name: trimmed, practice_id: auth.profile.practice_id })
   if (error) {
     if (error.code === '23505') {
       return { success: false, error: 'That category already exists.' }

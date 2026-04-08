@@ -236,20 +236,31 @@ export interface Database {
           name: string;
           sort_order: number;
           is_active: boolean;
+          practice_id: string | null;
         };
         Insert: {
           id?: string;
           name: string;
           sort_order?: number;
           is_active?: boolean;
+          practice_id?: string | null;
         };
         Update: {
           id?: string;
           name?: string;
           sort_order?: number;
           is_active?: boolean;
+          practice_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "activity_categories_practice_id_fkey";
+            columns: ["practice_id"];
+            isOneToOne: false;
+            referencedRelation: "practices";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       activity_logs: {
         Row: {
@@ -343,6 +354,7 @@ export interface Database {
           practice_name: string;
           category_name: string;
           appointment_count: number;
+          practice_id: string;
         };
         Relationships: [];
       };

@@ -5,6 +5,7 @@ import {
   isAppRole,
 } from "@/lib/supabase/auth-profile";
 import { listPractices, listActivityCategories, listRecentLogsGrouped } from '@/lib/supabase/activity'
+import { getPracticeScopeIdsForSession } from '@/lib/supabase/practice-scope'
 import { listClinicians } from '@/lib/supabase/data'
 import ActivityLogForm from './ActivityLogForm'
 import RecentLogs from './RecentLogs'
@@ -22,11 +23,13 @@ export default async function ActivityPage() {
   const isClinician = role === 'clinician'
   const isManager = role === 'practice_manager' || role === 'pcn_manager'
 
+  const scope = await getPracticeScopeIdsForSession(session)
+
   const [clinicians, practices, categories, recentLogs] = await Promise.all([
     listClinicians(),
     listPractices(),
     listActivityCategories(),
-    listRecentLogsGrouped(10),
+    listRecentLogsGrouped(10, scope),
   ])
 
   let clinicianRecordId: string | null = null
