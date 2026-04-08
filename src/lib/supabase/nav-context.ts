@@ -10,6 +10,7 @@ export type NavContext = {
   userEmail: string;
   sidebarLine: string;
   initials: string;
+  roleLabel: string;
 };
 
 function initialsFromName(name: string): string {
@@ -51,5 +52,6 @@ export async function getNavContext(): Promise<NavContext | null> {
     userEmail: email,
     sidebarLine,
     initials: initialsFromName(displayName),
+    roleLabel,
   };
 }

@@ -24,8 +24,13 @@ import type {
 } from "@/lib/supabase/activity";
 import { formatMonthLabelUK } from "@/lib/datetime";
 
-const BAR_FILL = "hsl(221, 83%, 53%)";
+const BAR_FILLS = [
+  "hsl(173, 80%, 36%)",
+  "hsl(199, 89%, 48%)",
+  "hsl(38, 92%, 50%)",
+] as const;
 const GRID = "hsl(214, 32%, 91%)";
+const AXIS_TICK = "hsl(215, 16%, 47%)";
 
 function trimLabel(s: string, max = 24) {
   if (s.length <= max) return s;
@@ -61,10 +66,10 @@ export function ReportingClient({
   return (
     <div className="mx-auto max-w-6xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
           Reporting
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm font-normal text-slate-600">
           Appointment activity across your PCN
         </p>
       </div>
@@ -86,7 +91,7 @@ export function ReportingClient({
             <div className="grid gap-1.5">
               <label
                 htmlFor="rep-from"
-                className="text-xs font-medium text-muted-foreground"
+                className="text-xs font-medium text-slate-600"
               >
                 From
               </label>
@@ -96,13 +101,13 @@ export function ReportingClient({
                 type="date"
                 required
                 defaultValue={initialFrom}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div className="grid gap-1.5">
               <label
                 htmlFor="rep-to"
-                className="text-xs font-medium text-muted-foreground"
+                className="text-xs font-medium text-slate-600"
               >
                 To
               </label>
@@ -112,10 +117,12 @@ export function ReportingClient({
                 type="date"
                 required
                 defaultValue={initialTo}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
-            <Button type="submit">Apply range</Button>
+            <Button type="submit" className="self-end sm:self-auto">
+              Apply range
+            </Button>
           </form>
         </CardContent>
       </Card>
@@ -126,18 +133,21 @@ export function ReportingClient({
           description="Total appointments in range, by category"
           data={catData}
           empty={charts.byCategory.length === 0}
+          barFill={BAR_FILLS[0]}
         />
         <ChartCard
           title="Appointments by clinician"
           description="Total appointments in range, by clinician"
           data={clinData}
           empty={charts.byClinician.length === 0}
+          barFill={BAR_FILLS[1]}
         />
         <ChartCard
           title="Appointments by practice"
           description="Total appointments in range, by practice"
           data={prData}
           empty={charts.byPractice.length === 0}
+          barFill={BAR_FILLS[2]}
         />
       </div>
 
@@ -151,26 +161,24 @@ export function ReportingClient({
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {table.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No data in this date range.
-            </p>
+            <p className="text-sm text-slate-600">No data in this date range.</p>
           ) : (
             <table className="w-full min-w-[40rem] text-sm">
               <thead>
-                <tr className="border-b border-border bg-muted/50 text-left">
-                  <th className="px-3 py-2 font-medium text-muted-foreground">
+                <tr className="border-b border-slate-200 bg-slate-100 text-left">
+                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Clinician
                   </th>
-                  <th className="px-3 py-2 font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Practice
                   </th>
-                  <th className="px-3 py-2 font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Month
                   </th>
-                  <th className="px-3 py-2 font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Appointments
                   </th>
-                  <th className="px-3 py-2 font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Hours
                   </th>
                 </tr>
@@ -179,21 +187,23 @@ export function ReportingClient({
                 {table.map((row, i) => (
                   <tr
                     key={`${row.clinician_name}-${row.practice_name}-${row.month_key}-${i}`}
-                    className="border-b border-border last:border-0"
+                    className={
+                      i % 2 === 0
+                        ? "border-b border-slate-100 bg-white"
+                        : "border-b border-slate-100 bg-slate-50/80"
+                    }
                   >
-                    <td className="px-3 py-2 font-medium text-foreground">
+                    <td className="px-4 py-3 font-medium text-slate-800">
                       {row.clinician_name}
                     </td>
-                    <td className="px-3 py-2 text-muted-foreground">
-                      {row.practice_name}
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground">
+                    <td className="px-4 py-3 text-slate-600">{row.practice_name}</td>
+                    <td className="px-4 py-3 text-slate-600">
                       {formatMonthLabelUK(row.month_key)}
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-foreground">
+                    <td className="px-4 py-3 tabular-nums text-slate-800">
                       {row.appointments.toLocaleString("en-GB")}
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-muted-foreground">
+                    <td className="px-4 py-3 tabular-nums text-slate-600">
                       {row.hours > 0
                         ? row.hours.toLocaleString("en-GB", {
                             maximumFractionDigits: 1,
@@ -216,11 +226,13 @@ function ChartCard({
   description,
   data,
   empty,
+  barFill,
 }: {
   title: string;
   description: string;
   data: { name: string; label: string; count: number }[];
   empty: boolean;
+  barFill: string;
 }) {
   return (
     <Card>
@@ -230,9 +242,7 @@ function ChartCard({
       </CardHeader>
       <CardContent className="h-[320px] w-full pt-2">
         {empty ? (
-          <p className="text-sm text-muted-foreground">
-            No appointments in this range.
-          </p>
+          <p className="text-sm text-slate-600">No appointments in this range.</p>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -242,21 +252,22 @@ function ChartCard({
               <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 11, fill: "hsl(215, 16%, 47%)" }}
+                tick={{ fontSize: 11, fill: AXIS_TICK }}
                 interval={0}
                 angle={-35}
                 textAnchor="end"
                 height={70}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "hsl(215, 16%, 47%)" }}
+                tick={{ fontSize: 11, fill: AXIS_TICK }}
                 allowDecimals={false}
               />
               <Tooltip
                 contentStyle={{
-                  borderRadius: "0.375rem",
+                  borderRadius: "0.75rem",
                   border: "1px solid hsl(214, 32%, 91%)",
                   fontSize: "12px",
+                  boxShadow: "0 4px 14px -2px rgb(15 23 42 / 0.08)",
                 }}
                 formatter={(value) => {
                   const n =
@@ -278,7 +289,7 @@ function ChartCard({
               <Bar
                 dataKey="count"
                 name="Appointments"
-                fill={BAR_FILL}
+                fill={barFill}
                 radius={[4, 4, 0, 0]}
                 maxBarSize={48}
               />

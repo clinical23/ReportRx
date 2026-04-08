@@ -3,8 +3,9 @@
 import { revalidatePath } from 'next/cache'
 
 import { requireProfileSession } from '@/lib/supabase/action-session'
-import { createClient } from '@/lib/supabase/server'
 import { isAppRole } from '@/lib/supabase/auth-profile'
+import { getPracticeScopeIdsForSession } from '@/lib/supabase/practice-scope'
+import { createClient } from '@/lib/supabase/server'
 
 export type CategoryEntry = {
   category_id: string
@@ -51,8 +52,12 @@ export async function saveActivityLog(
     return { success: false, error: 'Unauthorized' }
   }
 
-  if (profile.role === 'practice_manager') {
-    if (!profile.practice_id || profile.practice_id !== input.practice_id) {
+  if (profile.role === 'practice_manager' || profile.role === 'pcn_manager') {
+    const scope = await getPracticeScopeIdsForSession({
+      user: auth.user,
+      profile,
+    })
+    if (!scope.includes(input.practice_id)) {
       return { success: false, error: 'Unauthorized' }
     }
   } else if (profile.role === 'clinician') {
@@ -141,10 +146,17 @@ export async function bulkSaveActivityLogs(
     return { success: false, error: auth.error }
   }
   if (
-    auth.profile.role !== 'practice_manager' ||
-    !auth.profile.practice_id ||
-    auth.profile.practice_id !== input.practice_id
+    (auth.profile.role !== 'practice_manager' &&
+      auth.profile.role !== 'pcn_manager') ||
+    !auth.profile.practice_id
   ) {
+    return { success: false, error: 'Unauthorized' }
+  }
+  const scope = await getPracticeScopeIdsForSession({
+    user: auth.user,
+    profile: auth.profile,
+  })
+  if (!scope.includes(input.practice_id)) {
     return { success: false, error: 'Unauthorized' }
   }
 
@@ -177,7 +189,8 @@ export async function addActivityCategory(
     return { success: false, error: auth.error }
   }
   if (
-    auth.profile.role !== 'practice_manager' ||
+    (auth.profile.role !== 'practice_manager' &&
+      auth.profile.role !== 'pcn_manager') ||
     !auth.profile.practice_id
   ) {
     return { success: false, error: 'Unauthorized' }

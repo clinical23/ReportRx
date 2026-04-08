@@ -160,3 +160,21 @@ export function formatMonthLabelUK(ym: string): string {
     timeZone: UK_TIMEZONE,
   });
 }
+
+/** Relative calendar-day label using London "today" (for activity lists). */
+export function formatRelativeDayLabelUK(
+  isoDate: string,
+  ref: Date = new Date(),
+): string {
+  const logDay = isoDate.slice(0, 10);
+  const today = todayISOInLondon(ref);
+  const logMs = new Date(`${logDay}T12:00:00`).getTime();
+  const todayMs = new Date(`${today}T12:00:00`).getTime();
+  if (!Number.isFinite(logMs) || !Number.isFinite(todayMs))
+    return formatDateMediumUK(isoDate);
+  const daysAgo = Math.round((todayMs - logMs) / 86400000);
+  if (daysAgo === 0) return "Today";
+  if (daysAgo === 1) return "Yesterday";
+  if (daysAgo > 1 && daysAgo <= 7) return `${daysAgo} days ago`;
+  return formatDateMediumUK(isoDate);
+}

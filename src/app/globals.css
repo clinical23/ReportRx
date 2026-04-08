@@ -4,30 +4,30 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    /* Employment Hero–inspired: teal primary, slate neutrals, soft surfaces */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 16%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 222 47% 16%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 221 83% 53%;
+    --popover-foreground: 222 47% 16%;
+    /* teal-600 family ~ #0d9488 */
+    --primary: 173 80% 36%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 98%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 16%;
     --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --success: 142 71% 45%;
+    --muted-foreground: 215 16% 46%;
+    --accent: 173 50% 95%;
+    --accent-foreground: 173 80% 28%;
+    --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;
-    --radius: 0.5rem;
+    --border: 214 32% 90%;
+    --input: 214 32% 90%;
+    --ring: 173 80% 36%;
+    --radius: 0.75rem;
   }
 }
 
@@ -37,5 +37,17 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    font-weight: 400;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-semibold text-slate-800;
+  }
+}
+
+@layer utilities {
+  .app-content-bg {
+    @apply bg-[#f8fafc];
   }
 }

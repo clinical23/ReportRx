@@ -1,16 +1,77 @@
 import {
+  Building2,
+  Calendar,
+  Clock,
+  FileStack,
+  LucideIcon,
+  Tag,
+  Users,
+} from "lucide-react";
+
+import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { formatDateMediumUK, formatRelativeDayLabelUK } from "@/lib/datetime";
 import { getDashboardSnapshot } from "@/lib/supabase/activity";
 import { getAuthProfile } from "@/lib/supabase/auth-profile";
 import { getPracticeScopeIdsForSession } from "@/lib/supabase/practice-scope";
-import { formatDateMediumUK } from "@/lib/datetime";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+function StatTile({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  accent,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  icon: LucideIcon;
+  accent: "teal" | "blue" | "violet" | "amber" | "rose" | "emerald";
+}) {
+  const borders = {
+    teal: "border-l-teal-500",
+    blue: "border-l-blue-500",
+    violet: "border-l-violet-500",
+    amber: "border-l-amber-500",
+    rose: "border-l-rose-500",
+    emerald: "border-l-emerald-500",
+  } as const;
+  const iconTones = {
+    teal: "text-teal-600",
+    blue: "text-blue-600",
+    violet: "text-violet-600",
+    amber: "text-amber-600",
+    rose: "text-rose-600",
+    emerald: "text-emerald-600",
+  } as const;
+
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm",
+        "border-l-4 pl-5",
+        borders[accent]
+      )}
+    >
+      <div className="absolute right-4 top-4 opacity-80">
+        <Icon className={cn("size-5", iconTones[accent])} aria-hidden />
+      </div>
+      <p className="pr-10 text-sm font-medium text-slate-500">{label}</p>
+      <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-slate-800">
+        {value}
+      </p>
+      <p className="mt-3 text-sm font-normal text-slate-600">{hint}</p>
+    </div>
+  );
+}
 
 export default async function DashboardPage() {
   const session = await getAuthProfile();
@@ -27,6 +88,8 @@ export default async function DashboardPage() {
       label: "Appointments this month",
       value: snap.appointmentsThisMonth.toLocaleString("en-GB"),
       hint: "From activity logs (UK calendar month)",
+      icon: Calendar,
+      accent: "teal" as const,
     },
     {
       label: "Hours logged this month",
@@ -37,11 +100,15 @@ export default async function DashboardPage() {
             })}h`
           : "—",
       hint: "Unique activity logs in the UK calendar month",
+      icon: Clock,
+      accent: "blue" as const,
     },
     {
       label: "Active clinicians this month",
       value: String(snap.activeCliniciansThisMonth),
       hint: "Clinicians with at least one log entry this month",
+      icon: Users,
+      accent: "violet" as const,
     },
   ];
 
@@ -56,6 +123,8 @@ export default async function DashboardPage() {
         snap.topCategoryAppointments > 0
           ? `${snap.topCategoryAppointments.toLocaleString("en-GB")} appointments`
           : "No category data yet",
+      icon: Tag,
+      accent: "amber" as const,
     },
     {
       label: "Most active practice this month",
@@ -67,54 +136,40 @@ export default async function DashboardPage() {
         snap.topPracticeAppointments > 0
           ? `${snap.topPracticeAppointments.toLocaleString("en-GB")} appointments`
           : "No practice data yet",
+      icon: Building2,
+      accent: "rose" as const,
     },
     {
       label: "Entries logged this month",
       value: String(snap.entriesThisMonth),
       hint: "Distinct activity log submissions",
+      icon: FileStack,
+      accent: "emerald" as const,
     },
   ];
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Welcome back, {firstName}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Here is an overview of your practice at a glance.
-        </p>
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-teal-50 via-white to-slate-50/80 p-6 shadow-sm sm:p-8">
+        <div className="max-w-2xl">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-800 sm:text-3xl">
+            Welcome back, {firstName}
+          </h1>
+          <p className="mt-2 text-sm font-normal text-slate-600">
+            Here is an overview of your practice at a glance.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         {row1.map((m) => (
-          <Card key={m.label}>
-            <CardHeader className="pb-2">
-              <CardDescription>{m.label}</CardDescription>
-              <CardTitle className="text-3xl font-semibold tabular-nums text-foreground">
-                {m.value}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{m.hint}</p>
-            </CardContent>
-          </Card>
+          <StatTile key={m.label} {...m} />
         ))}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         {row2.map((m) => (
-          <Card key={m.label}>
-            <CardHeader className="pb-2">
-              <CardDescription>{m.label}</CardDescription>
-              <CardTitle className="text-2xl font-semibold tracking-tight text-foreground">
-                {m.value}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{m.hint}</p>
-            </CardContent>
-          </Card>
+          <StatTile key={m.label} {...m} />
         ))}
       </div>
 
@@ -127,32 +182,58 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           {snap.recentEntries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-600">
               No activity logged yet this month.
             </p>
           ) : (
-            <div className="space-y-3">
-              {snap.recentEntries.map((e) => (
-                <div
-                  key={e.log_id}
-                  className="flex flex-col gap-1 border-b border-border pb-3 text-sm last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <p className="font-medium text-foreground">
-                      {e.clinician_name || "—"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {e.practice_name || "—"}
-                    </p>
-                  </div>
-                  <div className="text-right text-xs text-muted-foreground sm:text-sm">
-                    <div>{formatDateMediumUK(e.log_date)}</div>
-                    <div className="tabular-nums">
-                      {e.appointment_total.toLocaleString("en-GB")} appointments
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <table className="w-full min-w-[36rem] text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-100 text-left">
+                    <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Clinician
+                    </th>
+                    <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Practice
+                    </th>
+                    <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                      When
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Appointments
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {snap.recentEntries.map((e, i) => (
+                    <tr
+                      key={e.log_id}
+                      className={cn(
+                        "border-b border-slate-100 last:border-0",
+                        i % 2 === 0 ? "bg-white" : "bg-slate-50/80"
+                      )}
+                    >
+                      <td className="px-4 py-3 font-medium text-slate-800">
+                        {e.clinician_name || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {e.practice_name || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        <span className="font-medium text-slate-800">
+                          {formatRelativeDayLabelUK(e.log_date)}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-slate-500">
+                          {formatDateMediumUK(e.log_date)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums font-medium text-slate-800">
+                        {e.appointment_total.toLocaleString("en-GB")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>

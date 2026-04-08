@@ -9,15 +9,20 @@ export default async function AppLayout({
 }) {
   const nav = await getNavContext();
 
-  const userLine = nav?.sidebarLine ?? "Signed in";
   const practiceName = nav?.practiceName ?? "ReportRx";
   const userDisplayName = nav?.userDisplayName ?? "User";
   const userEmail = nav?.userEmail ?? "";
   const initials = nav?.initials ?? "U";
+  const roleLabel = nav?.roleLabel ?? "User";
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
-      <AppSidebar userLine={userLine} />
+    <div className="flex min-h-screen bg-[#f8fafc]">
+      <AppSidebar
+        userDisplayName={userDisplayName}
+        userEmail={userEmail}
+        initials={initials}
+        roleLabel={roleLabel}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopNavbar
           practiceName={practiceName}
@@ -25,7 +30,9 @@ export default async function AppLayout({
           userEmail={userEmail}
           initials={initials}
         />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="app-content-bg flex-1 overflow-auto p-4 sm:p-6">
+          {children}
+        </main>
       </div>
     </div>
   );

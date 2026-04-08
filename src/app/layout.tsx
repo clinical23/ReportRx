@@ -6,6 +6,7 @@ import "./globals.css";
 const sans = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const mono = JetBrains_Mono({

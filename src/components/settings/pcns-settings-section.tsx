@@ -17,7 +17,7 @@ import {
 import type { PcnListItem } from "@/lib/supabase/data";
 
 const inputClassName =
-  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20";
 
 export type PcnsSettingsSectionProps = {
   initialPcns: PcnListItem[];
@@ -66,22 +66,22 @@ export function PcnsSettingsSection({
       ) : null}
 
       {practiceName ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-slate-600">
           PCNs for your workspace
-          <span className="font-medium text-foreground">
+          <span className="font-medium text-slate-800">
             {" "}
             · {practiceName}
           </span>
         </p>
       ) : (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-slate-600">
           PCNs are shared across the workspace and can be linked to clinicians
           from the Clinicians page.
         </p>
       )}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <p className="text-sm text-muted-foreground sm:max-w-md">
+        <p className="text-sm text-slate-600 sm:max-w-md">
           {initialPcns.length === 0
             ? "No PCNs yet."
             : `${initialPcns.length} PCN${initialPcns.length === 1 ? "" : "s"} configured.`}
@@ -96,9 +96,9 @@ export function PcnsSettingsSection({
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-stripe">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {initialPcns.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+          <p className="px-4 py-8 text-center text-sm text-slate-600">
             No PCNs yet. Use{" "}
             <span className="font-medium text-foreground">Add PCN</span> to
             create one.
@@ -107,22 +107,26 @@ export function PcnsSettingsSection({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[20rem] text-sm">
               <thead>
-                <tr className="border-b border-border bg-muted/50 text-left">
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                <tr className="border-b border-slate-200 bg-slate-100 text-left">
+                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Name
                   </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {initialPcns.map((p) => (
+                {initialPcns.map((p, i) => (
                   <tr
                     key={p.id}
-                    className="border-b border-border last:border-0 hover:bg-muted/30"
+                    className={
+                      i % 2 === 0
+                        ? "border-b border-slate-100 bg-white hover:bg-slate-50/80"
+                        : "border-b border-slate-100 bg-slate-50/70 hover:bg-slate-50"
+                    }
                   >
-                    <td className="px-4 py-3 font-medium text-foreground">
+                    <td className="px-4 py-3 font-medium text-slate-800">
                       {p.name}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -228,7 +232,7 @@ function AddPcnDialog({
           <div>
             <label
               htmlFor="pcn-name"
-              className="mb-1.5 block text-xs font-medium text-muted-foreground"
+              className="mb-1.5 block text-xs font-medium text-slate-600"
             >
               Name <span className="text-destructive">*</span>
             </label>

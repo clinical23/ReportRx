@@ -33,10 +33,10 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
           Settings
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm font-normal text-slate-500">
           Practice preferences and workspace defaults.
         </p>
       </div>
@@ -49,19 +49,19 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-2">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className="text-xs font-medium text-slate-600">
               Practice name
             </label>
-            <div className="rounded-md border border-border bg-secondary/30 px-3 py-2 text-sm text-foreground">
+            <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-800">
               {practiceName}
             </div>
           </div>
-          <Separator />
+          <Separator className="bg-slate-200" />
           <div className="grid gap-2">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className="text-xs font-medium text-slate-600">
               Timezone
             </label>
-            <div className="rounded-md border border-border bg-secondary/30 px-3 py-2 text-sm text-foreground">
+            <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-800">
               Europe/London (UK)
             </div>
           </div>
@@ -97,7 +97,7 @@ export default async function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-slate-600">
             Notification toggles can be wired to your backend or a provider
             later; this panel matches the layout you will extend.
           </p>

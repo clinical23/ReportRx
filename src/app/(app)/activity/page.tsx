@@ -48,16 +48,16 @@ export default async function ActivityPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
           Clinical activity log
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm font-normal text-slate-600">
           Record appointment categories per clinician, practice and day
         </p>
       </div>
 
       {!profile ? (
-        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Your profile row is missing. Ask an administrator to run the profiles migration or create a profile for your account in Supabase.
         </div>
       ) : null}

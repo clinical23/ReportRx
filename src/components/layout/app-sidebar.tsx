@@ -7,14 +7,14 @@ import {
   BarChart3,
   LayoutDashboard,
   LogOut,
-  Stethoscope,
+  Pill,
   Settings,
+  Stethoscope,
 } from "lucide-react";
 
 import { signOut } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Separator } from "@/components/ui/separator";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -25,20 +25,36 @@ const nav = [
 ];
 
 type Props = {
-  userLine: string;
+  userDisplayName: string;
+  userEmail: string;
+  initials: string;
+  roleLabel: string;
 };
 
-export function AppSidebar({ userLine }: Props) {
+export function AppSidebar({
+  userDisplayName,
+  userEmail,
+  initials,
+  roleLabel,
+}: Props) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-56 flex-col border-r border-border bg-card">
-      <div className="flex h-14 items-center px-5">
-        <span className="text-sm font-semibold tracking-tight text-foreground">
-          ReportRx
-        </span>
+    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-slate-800 bg-slate-950">
+      <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-5">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white shadow-sm shadow-teal-900/40">
+          <Pill className="size-5" strokeWidth={2.25} aria-hidden />
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold tracking-tight text-white">
+            ReportRx
+          </div>
+          <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
+            Clinical workspace
+          </div>
+        </div>
       </div>
-      <Separator />
+
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
         {nav.map(({ href, label, icon: Icon }) => {
           const active =
@@ -50,28 +66,49 @@ export function AppSidebar({ userLine }: Props) {
               key={href}
               href={href}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "relative mx-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 active
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-slate-800 text-white before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-teal-400"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
               )}
             >
-              <Icon className="size-4 shrink-0 opacity-70" />
+              <Icon
+                className={cn(
+                  "size-4 shrink-0",
+                  active ? "text-teal-300" : "opacity-80"
+                )}
+              />
               {label}
             </Link>
           );
         })}
       </nav>
-      <div className="mt-auto space-y-3 border-t border-border p-3">
-        <p className="px-1 text-xs leading-snug text-muted-foreground">{userLine}</p>
+
+      <div className="mt-auto space-y-3 border-t border-slate-800 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-semibold text-slate-100">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-white">
+              {userDisplayName}
+            </p>
+            {userEmail ? (
+              <p className="truncate text-xs text-slate-500">{userEmail}</p>
+            ) : null}
+            <span className="mt-2 inline-flex max-w-full truncate rounded-full bg-teal-500/20 px-2 py-0.5 text-[11px] font-medium text-teal-300">
+              {roleLabel}
+            </span>
+          </div>
+        </div>
         <form action={signOut}>
           <Button
             type="submit"
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="w-full justify-center gap-2 text-muted-foreground"
+            className="h-9 w-full justify-center text-slate-400 hover:bg-slate-800 hover:text-slate-200"
           >
-            <LogOut className="size-4" />
+            <LogOut className="size-4 opacity-70" />
             Sign out
           </Button>
         </form>

@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { Practice } from "@/lib/supabase/activity";
 import type {
   ClinicianDirectoryRow,
@@ -24,7 +25,14 @@ import type {
 } from "@/lib/supabase/data";
 
 const inputClassName =
-  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20";
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 type Props = {
   clinicians: ClinicianDirectoryRow[];
@@ -66,10 +74,10 @@ export function CliniciansView({ clinicians, practices, pcns }: Props) {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
             Clinicians
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm font-normal text-slate-600">
             Directory of providers and their linked practices.
           </p>
         </div>
@@ -82,59 +90,87 @@ export function CliniciansView({ clinicians, practices, pcns }: Props) {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-stripe">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {clinicians.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+          <p className="px-4 py-8 text-center text-sm text-slate-600">
             No clinicians yet. Use{" "}
-            <span className="font-medium text-foreground">Add clinician</span>{" "}
+            <span className="font-medium text-slate-800">Add clinician</span>{" "}
             to create one.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[52rem] text-sm">
               <thead>
-                <tr className="border-b border-border bg-muted/50 text-left">
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                <tr className="border-b border-slate-200 bg-slate-100 text-left">
+                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Name
                   </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Role
                   </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Practices
                   </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     PCN
                   </th>
-                  <th className="hidden px-4 py-3 font-medium text-muted-foreground md:table-cell">
+                  <th className="hidden px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500 md:table-cell">
                     Total hours (this month)
                   </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {clinicians.map((c) => (
+                {clinicians.map((c, i) => (
                   <tr
                     key={c.id}
-                    className="border-b border-border last:border-0 hover:bg-muted/30"
+                    className={
+                      i % 2 === 0
+                        ? "border-b border-slate-100 bg-white hover:bg-slate-50/90"
+                        : "border-b border-slate-100 bg-slate-50/70 hover:bg-slate-50"
+                    }
                   >
-                    <td className="px-4 py-3 font-medium text-foreground">
-                      {c.name}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="size-9 shrink-0 border border-slate-200">
+                          <AvatarFallback className="bg-teal-100 text-xs font-semibold text-teal-800">
+                            {initialsFromName(c.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium text-slate-800">
+                          {c.name}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{c.role}</td>
-                    <td className="max-w-[12rem] px-4 py-3 text-muted-foreground">
+                    <td className="px-4 py-3">
+                      <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                        {c.role}
+                      </span>
+                    </td>
+                    <td className="max-w-[12rem] px-4 py-3 text-sm text-slate-600">
                       {c.practice_names.length > 0
                         ? c.practice_names.join(", ")
                         : "—"}
                     </td>
-                    <td className="max-w-[14rem] px-4 py-3 text-muted-foreground">
-                      {c.pcn_names.length > 0
-                        ? c.pcn_names.join(", ")
-                        : "—"}
+                    <td className="max-w-[14rem] px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {c.pcn_names.length > 0 ? (
+                          c.pcn_names.map((n, idx) => (
+                            <span
+                              key={`${c.id}-pcn-${idx}`}
+                              className="inline-flex rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-teal-200/70"
+                            >
+                              {n}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-slate-500">—</span>
+                        )}
+                      </div>
                     </td>
-                    <td className="hidden px-4 py-3 tabular-nums text-muted-foreground md:table-cell">
+                    <td className="hidden px-4 py-3 tabular-nums text-slate-600 md:table-cell">
                       {c.hours_this_month > 0
                         ? `${c.hours_this_month.toLocaleString("en-GB", {
                             maximumFractionDigits: 1,
@@ -145,12 +181,12 @@ export function CliniciansView({ clinicians, practices, pcns }: Props) {
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
-                        className="gap-1.5"
+                        size="icon"
+                        className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                         onClick={() => setEditRow(c)}
+                        aria-label={`Edit ${c.name}`}
                       >
-                        <Pencil className="size-3.5" aria-hidden />
-                        Edit
+                        <Pencil className="size-4" aria-hidden />
                       </Button>
                     </td>
                   </tr>
@@ -271,7 +307,7 @@ function ClinicianFormDialog({
           <div>
             <label
               htmlFor={`clinician-name-${mode}`}
-              className="mb-1.5 block text-xs font-medium text-muted-foreground"
+              className="mb-1.5 block text-xs font-medium text-slate-600"
             >
               Name <span className="text-destructive">*</span>
             </label>
@@ -291,7 +327,7 @@ function ClinicianFormDialog({
           <div>
             <label
               htmlFor={`clinician-role-${mode}`}
-              className="mb-1.5 block text-xs font-medium text-muted-foreground"
+              className="mb-1.5 block text-xs font-medium text-slate-600"
             >
               Role
             </label>
@@ -306,15 +342,15 @@ function ClinicianFormDialog({
             />
           </div>
           <div>
-            <p className="mb-2 text-xs font-medium text-muted-foreground">
+            <p className="mb-2 text-xs font-medium text-slate-600">
               Practices
             </p>
             {practices.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-600">
                 No practices in the directory yet.
               </p>
             ) : (
-              <ul className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-border bg-muted/20 p-3">
+              <ul className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/50 p-3">
                 {practices.map((p) => {
                   const checked =
                     initial?.practice_ids.includes(p.id) ?? false;
@@ -335,7 +371,7 @@ function ClinicianFormDialog({
                       >
                         {p.name}
                         {p.pcn_name ? (
-                          <span className="block text-xs text-muted-foreground">
+                          <span className="block text-xs text-slate-500">
                             {p.pcn_name}
                           </span>
                         ) : null}
@@ -347,15 +383,15 @@ function ClinicianFormDialog({
             )}
           </div>
           <div>
-            <p className="mb-2 text-xs font-medium text-muted-foreground">
+            <p className="mb-2 text-xs font-medium text-slate-600">
               PCNs
             </p>
             {pcns.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-600">
                 No PCNs in Settings yet. Add PCNs under Settings → PCNs.
               </p>
             ) : (
-              <ul className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-border bg-muted/20 p-3">
+              <ul className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/50 p-3">
                 {pcns.map((p) => {
                   const checked =
                     initial?.pcn_ids.includes(p.id) ?? false;
