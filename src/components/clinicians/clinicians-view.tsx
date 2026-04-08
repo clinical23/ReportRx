@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { CheckCircle2, Pencil } from "lucide-react";
+import { CheckCircle2, Pencil, Trash2 } from "lucide-react";
 
 import {
   addClinicianAction,
+  deleteClinicianAction,
   updateClinicianAction,
 } from "@/app/actions/clinicians";
 import { Button } from "@/components/ui/button";
@@ -23,9 +24,13 @@ import type {
   ClinicianDirectoryRow,
   PcnListItem,
 } from "@/lib/supabase/data";
+import { cn } from "@/lib/utils";
 
 const inputClassName =
   "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20";
+
+const selectClassName =
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm text-slate-800 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20";
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -34,18 +39,45 @@ function initialsFromName(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+function typeNameForClinician(
+  clinicianTypeId: string | null,
+  clinicianTypes: { id: string; name: string }[],
+): string | null {
+  if (!clinicianTypeId) return null;
+  return clinicianTypes.find((t) => t.id === clinicianTypeId)?.name ?? null;
+}
+
+type ClinicianTypeOption = { id: string; name: string };
+
 type Props = {
   clinicians: ClinicianDirectoryRow[];
   practices: Practice[];
   pcns: PcnListItem[];
+  permissions: string[];
+  clinicianTypes: ClinicianTypeOption[];
 };
 
-export function CliniciansView({ clinicians, practices, pcns }: Props) {
+export function CliniciansView({
+  clinicians,
+  practices,
+  pcns,
+  permissions,
+  clinicianTypes,
+}: Props) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [editRow, setEditRow] = useState<ClinicianDirectoryRow | null>(null);
+  const [deleteRow, setDeleteRow] = useState<ClinicianDirectoryRow | null>(
+    null,
+  );
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteErr, setDeleteErr] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const canAdd = permissions.includes("clinicians.add");
+  const canEdit = permissions.includes("clinicians.edit");
+  const canDelete = permissions.includes("clinicians.delete");
 
   useEffect(() => {
     return () => {
@@ -53,12 +85,30 @@ export function CliniciansView({ clinicians, practices, pcns }: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!deleteRow) setDeleteErr(null);
+  }, [deleteRow]);
+
   const showBanner = (msg: string) => {
     setBanner(msg);
     if (bannerTimer.current) clearTimeout(bannerTimer.current);
     bannerTimer.current = setTimeout(() => setBanner(null), 6000);
     router.refresh();
   };
+
+  async function handleConfirmDelete() {
+    if (!deleteRow) return;
+    setDeleteBusy(true);
+    setDeleteErr(null);
+    const res = await deleteClinicianAction(deleteRow.id);
+    setDeleteBusy(false);
+    if ("success" in res && res.success) {
+      setDeleteRow(null);
+      showBanner("Clinician deleted.");
+    } else {
+      setDeleteErr("error" in res ? res.error : "Something went wrong.");
+    }
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -81,32 +131,42 @@ export function CliniciansView({ clinicians, practices, pcns }: Props) {
             Directory of providers and their linked practices.
           </p>
         </div>
-        <Button
-          type="button"
-          className="shrink-0 self-start sm:self-auto"
-          onClick={() => setAddOpen(true)}
-        >
-          Add clinician
-        </Button>
+        {canAdd ? (
+          <Button
+            type="button"
+            className="shrink-0 self-start sm:self-auto"
+            onClick={() => setAddOpen(true)}
+          >
+            Add clinician
+          </Button>
+        ) : null}
       </div>
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {clinicians.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-slate-600">
-            No clinicians yet. Use{" "}
-            <span className="font-medium text-slate-800">Add clinician</span>{" "}
-            to create one.
+            No clinicians yet.
+            {canAdd ? (
+              <>
+                {" "}
+                Use{" "}
+                <span className="font-medium text-slate-800">
+                  Add clinician
+                </span>{" "}
+                to create one.
+              </>
+            ) : null}
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[52rem] text-sm">
+            <table className="w-full min-w-[56rem] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-100 text-left">
                   <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Name
                   </th>
                   <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
-                    Role
+                    Type
                   </th>
                   <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
                     Practices
@@ -117,80 +177,115 @@ export function CliniciansView({ clinicians, practices, pcns }: Props) {
                   <th className="hidden px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500 md:table-cell">
                     Total hours (this month)
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
-                    <span className="sr-only">Actions</span>
-                  </th>
+                  {(canEdit || canDelete) && (
+                    <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {clinicians.map((c, i) => (
-                  <tr
-                    key={c.id}
-                    className={
-                      i % 2 === 0
-                        ? "border-b border-slate-100 bg-white hover:bg-slate-50/90"
-                        : "border-b border-slate-100 bg-slate-50/70 hover:bg-slate-50"
-                    }
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="size-9 shrink-0 border border-slate-200">
-                          <AvatarFallback className="bg-teal-100 text-xs font-semibold text-teal-800">
-                            {initialsFromName(c.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium text-slate-800">
-                          {c.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
-                        {c.role}
-                      </span>
-                    </td>
-                    <td className="max-w-[12rem] px-4 py-3 text-sm text-slate-600">
-                      {c.practice_names.length > 0
-                        ? c.practice_names.join(", ")
-                        : "—"}
-                    </td>
-                    <td className="max-w-[14rem] px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {c.pcn_names.length > 0 ? (
-                          c.pcn_names.map((n, idx) => (
-                            <span
-                              key={`${c.id}-pcn-${idx}`}
-                              className="inline-flex rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-teal-200/70"
-                            >
-                              {n}
-                            </span>
-                          ))
+                {clinicians.map((c, i) => {
+                  const typeLabel = typeNameForClinician(
+                    c.clinician_type_id,
+                    clinicianTypes,
+                  );
+                  return (
+                    <tr
+                      key={c.id}
+                      className={
+                        i % 2 === 0
+                          ? "border-b border-slate-100 bg-white hover:bg-slate-50/90"
+                          : "border-b border-slate-100 bg-slate-50/70 hover:bg-slate-50"
+                      }
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="size-9 shrink-0 border border-slate-200">
+                            <AvatarFallback className="bg-teal-100 text-xs font-semibold text-teal-800">
+                              {initialsFromName(c.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium text-slate-800">
+                            {c.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {typeLabel ? (
+                          <span
+                            className={cn(
+                              "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+                              "bg-teal-50 text-teal-900 ring-1 ring-teal-200/70",
+                            )}
+                          >
+                            {typeLabel}
+                          </span>
                         ) : (
                           <span className="text-slate-500">—</span>
                         )}
-                      </div>
-                    </td>
-                    <td className="hidden px-4 py-3 tabular-nums text-slate-600 md:table-cell">
-                      {c.hours_this_month > 0
-                        ? `${c.hours_this_month.toLocaleString("en-GB", {
-                            maximumFractionDigits: 1,
-                          })}h`
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                        onClick={() => setEditRow(c)}
-                        aria-label={`Edit ${c.name}`}
-                      >
-                        <Pencil className="size-4" aria-hidden />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="max-w-[12rem] px-4 py-3 text-sm text-slate-600">
+                        {c.practice_names.length > 0
+                          ? c.practice_names.join(", ")
+                          : "—"}
+                      </td>
+                      <td className="max-w-[14rem] px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {c.pcn_names.length > 0 ? (
+                            c.pcn_names.map((n, idx) => (
+                              <span
+                                key={`${c.id}-pcn-${idx}`}
+                                className="inline-flex rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-teal-200/70"
+                              >
+                                {n}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-slate-500">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="hidden px-4 py-3 tabular-nums text-slate-600 md:table-cell">
+                        {c.hours_this_month > 0
+                          ? `${c.hours_this_month.toLocaleString("en-GB", {
+                              maximumFractionDigits: 1,
+                            })}h`
+                          : "—"}
+                      </td>
+                      {(canEdit || canDelete) && (
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            {canEdit ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                onClick={() => setEditRow(c)}
+                                aria-label={`Edit ${c.name}`}
+                              >
+                                <Pencil className="size-4" aria-hidden />
+                              </Button>
+                            ) : null}
+                            {canDelete ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="border-red-200 text-destructive hover:bg-red-50 hover:text-destructive"
+                                onClick={() => setDeleteRow(c)}
+                                aria-label={`Delete ${c.name}`}
+                              >
+                                <Trash2 className="size-4" aria-hidden />
+                              </Button>
+                            ) : null}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -205,6 +300,7 @@ export function CliniciansView({ clinicians, practices, pcns }: Props) {
         initial={null}
         practices={practices}
         pcns={pcns}
+        clinicianTypes={clinicianTypes}
         onSaved={() => {
           setAddOpen(false);
           showBanner("Clinician added.");
@@ -221,11 +317,59 @@ export function CliniciansView({ clinicians, practices, pcns }: Props) {
         initial={editRow}
         practices={practices}
         pcns={pcns}
+        clinicianTypes={clinicianTypes}
         onSaved={() => {
           setEditRow(null);
           showBanner("Clinician updated.");
         }}
       />
+
+      <Dialog
+        open={deleteRow != null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteRow(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete clinician</DialogTitle>
+            <DialogDescription>
+              {deleteRow ? (
+                <>
+                  Delete{" "}
+                  <span className="font-medium text-slate-800">
+                    {deleteRow.name}
+                  </span>
+                  ? This action cannot be undone.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          {deleteErr ? (
+            <p className="text-sm text-destructive" role="alert">
+              {deleteErr}
+            </p>
+          ) : null}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deleteBusy}
+              onClick={() => setDeleteRow(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteBusy || !deleteRow}
+              onClick={handleConfirmDelete}
+            >
+              {deleteBusy ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -237,6 +381,7 @@ function ClinicianFormDialog({
   initial,
   practices,
   pcns,
+  clinicianTypes,
   onSaved,
 }: {
   open: boolean;
@@ -245,6 +390,7 @@ function ClinicianFormDialog({
   initial: ClinicianDirectoryRow | null;
   practices: Practice[];
   pcns: PcnListItem[];
+  clinicianTypes: ClinicianTypeOption[];
   onSaved: () => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -326,20 +472,25 @@ function ClinicianFormDialog({
           </div>
           <div>
             <label
-              htmlFor={`clinician-role-${mode}`}
+              htmlFor={`clinician-type-${mode}`}
               className="mb-1.5 block text-xs font-medium text-slate-600"
             >
-              Role
+              Clinician type
             </label>
-            <input
-              id={`clinician-role-${mode}`}
-              name="role"
-              type="text"
+            <select
+              id={`clinician-type-${mode}`}
+              name="clinician_type_id"
               disabled={isPending}
-              className={inputClassName}
-              placeholder="e.g. Clinician, Nurse"
-              defaultValue={initial?.role ?? "Clinician"}
-            />
+              className={selectClassName}
+              defaultValue={initial?.clinician_type_id ?? ""}
+            >
+              <option value="">Select type…</option>
+              {clinicianTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <p className="mb-2 text-xs font-medium text-slate-600">

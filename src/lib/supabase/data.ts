@@ -8,13 +8,14 @@ export type ClinicianListItem = {
   id: string;
   name: string;
   role: string;
+  clinician_type_id: string | null;
 };
 
 export async function listClinicians(): Promise<ClinicianListItem[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("clinicians")
-    .select("id, name, role")
+    .select("id, name, role, clinician_type_id")
     .order("name", { ascending: true });
 
   if (error) {
@@ -74,6 +75,7 @@ export type ClinicianDirectoryRow = {
   id: string;
   name: string;
   role: string;
+  clinician_type_id: string | null;
   created_at: string;
   pcn_names: string[];
   pcn_ids: string[];
@@ -110,6 +112,7 @@ type ClinicianRowDb = {
   id: string;
   name: string;
   role: string;
+  clinician_type_id: string | null;
   created_at: string;
 };
 
@@ -122,7 +125,7 @@ export async function getClinicians(): Promise<ClinicianDirectoryRow[]> {
 
   const { data: clinicianRows, error: clinError } = await supabase
     .from("clinicians")
-    .select("id, name, role, created_at")
+    .select("id, name, role, clinician_type_id, created_at")
     .order("name", { ascending: true });
 
   if (clinError || !clinicianRows) {
@@ -232,6 +235,7 @@ export async function getClinicians(): Promise<ClinicianDirectoryRow[]> {
       id: r.id,
       name: r.name,
       role: r.role,
+      clinician_type_id: r.clinician_type_id,
       created_at: r.created_at,
       pcn_ids: pcns.pcn_ids,
       pcn_names: pcns.pcn_names,
@@ -245,6 +249,7 @@ export async function getClinicians(): Promise<ClinicianDirectoryRow[]> {
 export async function createClinician(input: {
   name: string;
   role?: string;
+  clinician_type_id?: string | null;
   practice_ids: string[];
   pcn_ids: string[];
 }): Promise<{ clinician: Clinician | null; error: string | null }> {
@@ -254,11 +259,15 @@ export async function createClinician(input: {
   }
 
   const role = (input.role ?? "Clinician").trim() || "Clinician";
+  const clinician_type_id =
+    input.clinician_type_id != null && input.clinician_type_id !== ""
+      ? input.clinician_type_id
+      : null;
 
   const supabase = await createClient();
   const { data: clinician, error } = await supabase
     .from("clinicians")
-    .insert({ name, role })
+    .insert({ name, role, clinician_type_id })
     .select()
     .single();
 
@@ -308,6 +317,7 @@ export async function updateClinician(input: {
   id: string;
   name: string;
   role: string;
+  clinician_type_id: string | null;
   practice_ids: string[];
   pcn_ids: string[];
 }): Promise<{ error: string | null }> {
@@ -317,12 +327,16 @@ export async function updateClinician(input: {
   }
 
   const role = input.role.trim() || "Clinician";
+  const clinician_type_id =
+    input.clinician_type_id && input.clinician_type_id !== ""
+      ? input.clinician_type_id
+      : null;
 
   const supabase = await createClient();
 
   const { data: updated, error: upError } = await supabase
     .from("clinicians")
-    .update({ name, role })
+    .update({ name, role, clinician_type_id })
     .eq("id", input.id)
     .select("id")
     .maybeSingle();
@@ -387,5 +401,36 @@ export async function updateClinician(input: {
     }
   }
 
+  return { error: null };
+}
+
+export async function deleteClinician(
+  id: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+
+  const { error: delPractices } = await supabase
+    .from("clinician_practices")
+    .delete()
+    .eq("clinician_id", id);
+  if (delPractices) {
+    console.error("[deleteClinician] clinician_practices", delPractices.message);
+    return { error: delPractices.message };
+  }
+
+  const { error: delPcns } = await supabase
+    .from("clinician_pcns")
+    .delete()
+    .eq("clinician_id", id);
+  if (delPcns) {
+    console.error("[deleteClinician] clinician_pcns", delPcns.message);
+    return { error: delPcns.message };
+  }
+
+  const { error } = await supabase.from("clinicians").delete().eq("id", id);
+  if (error) {
+    console.error("[deleteClinician] clinicians", error.message);
+    return { error: error.message };
+  }
   return { error: null };
 }
