@@ -166,18 +166,21 @@ export interface Database {
           name: string;
           role: string;
           created_at: string;
+          pcn_name: string | null;
         };
         Insert: {
           id?: string;
           name: string;
           role?: string;
           created_at?: string;
+          pcn_name?: string | null;
         };
         Update: {
           id?: string;
           name?: string;
           role?: string;
           created_at?: string;
+          pcn_name?: string | null;
         };
         Relationships: [];
       };
