@@ -77,7 +77,15 @@ export default async function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <PcnsSettingsSection initialPcns={pcns} />
+          <PcnsSettingsSection
+            initialPcns={pcns}
+            practiceName={
+              profile?.practice_id &&
+              practiceName !== "Not linked to a practice"
+                ? practiceName
+                : null
+            }
+          />
         </CardContent>
       </Card>
 
