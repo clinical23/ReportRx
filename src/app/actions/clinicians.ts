@@ -9,6 +9,7 @@ import {
   updateClinician,
 } from "@/lib/supabase/data";
 import { userHasPermission } from "@/lib/supabase/permissions";
+import { createClient } from "@/lib/supabase/server";
 
 export type ClinicianMutationResult =
   | { ok: true }
@@ -121,6 +122,23 @@ export async function updateClinicianAction(
     return { ok: false, error: "Missing clinician id" };
   }
 
+  // Verify clinician belongs to user's organisation via practices
+  const supabase = await createClient();
+  const orgId = (auth.profile as Record<string, unknown>).organisation_id as string;
+  const { data: orgPractices } = await supabase
+    .from("practices")
+    .select("id")
+    .eq("organisation_id", orgId);
+  const orgPracticeIds = new Set((orgPractices ?? []).map((p) => p.id));
+  const { data: clinicianLinks } = await supabase
+    .from("clinician_practices")
+    .select("practice_id")
+    .eq("clinician_id", id);
+  const belongsToOrg = (clinicianLinks ?? []).some((lp) => orgPracticeIds.has(lp.practice_id));
+  if (!belongsToOrg) {
+    return { ok: false, error: "Clinician not found" };
+  }
+
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
     return { ok: false, error: "Name is required" };
@@ -185,6 +203,23 @@ export async function deleteClinicianAction(
   const id = clinicianId.trim();
   if (!id) {
     return { error: "Missing clinician id" };
+  }
+
+  // Verify clinician belongs to user's organisation via practices
+  const supabase = await createClient();
+  const orgId = (auth.profile as Record<string, unknown>).organisation_id as string;
+  const { data: orgPractices } = await supabase
+    .from("practices")
+    .select("id")
+    .eq("organisation_id", orgId);
+  const orgPracticeIds = new Set((orgPractices ?? []).map((p) => p.id));
+  const { data: clinicianLinks } = await supabase
+    .from("clinician_practices")
+    .select("practice_id")
+    .eq("clinician_id", id);
+  const belongsToOrg = (clinicianLinks ?? []).some((lp) => orgPracticeIds.has(lp.practice_id));
+  if (!belongsToOrg) {
+    return { error: "Clinician not found" };
   }
 
   const { error } = await deleteClinician(id);

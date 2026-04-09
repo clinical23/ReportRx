@@ -197,7 +197,7 @@ export async function inviteUserFormAction(
 
 // Transfer admin — promote a user to admin or superadmin (superadmin only)
 export async function changeUserRole(formData: FormData): Promise<void> {
-  await requireRole('superadmin')
+  const profile = await requireRole('superadmin')
   const supabase = await createClient()
 
   const userId = formData.get('user_id') as string
@@ -208,10 +208,22 @@ export async function changeUserRole(formData: FormData): Promise<void> {
     redirectAdminError('Invalid role')
   }
 
+  // Verify target user belongs to the same organisation
+  const { data: targetUser } = await supabase
+    .from('profiles')
+    .select('organisation_id')
+    .eq('id', userId)
+    .single()
+
+  if (!targetUser || targetUser.organisation_id !== profile.organisation_id) {
+    redirectAdminError('User not found in your organisation')
+  }
+
   const { error } = await supabase
     .from('profiles')
     .update({ role: newRole, updated_at: new Date().toISOString() })
     .eq('id', userId)
+    .eq('organisation_id', profile.organisation_id)
 
   if (error) redirectAdminError(error.message)
 

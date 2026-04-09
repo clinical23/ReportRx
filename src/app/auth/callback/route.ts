@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const next = url.searchParams.get('next') ?? '/'
   const origin = url.origin
 
-  const safeNext = next.startsWith('/') ? next : `/${next}`
+  const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/'
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=auth_failed`)

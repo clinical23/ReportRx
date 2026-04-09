@@ -332,58 +332,70 @@ export function ReportingDashboardClient({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
           <h2 className="mb-3 text-sm font-semibold text-gray-900">Appointments by category</h2>
-          <div className="h-[300px] md:h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={byCategory} layout="vertical" margin={{ left: 20, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" />
-                <YAxis type="category" dataKey="category_name" width={120} />
-                <Tooltip />
-                <Bar dataKey="total_count" fill="#0D9488" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {byCategory.length === 0 ? (
+            <p className="py-12 text-center text-sm text-gray-500">No category data for this period.</p>
+          ) : (
+            <div className="h-[300px] md:h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={byCategory} layout="vertical" margin={{ left: 20, right: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" />
+                  <YAxis type="category" dataKey="category_name" width={120} />
+                  <Tooltip />
+                  <Bar dataKey="total_count" fill="#0D9488" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
         <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
           <h2 className="mb-3 text-sm font-semibold text-gray-900">Appointments by practice</h2>
-          <div className="h-[300px] md:h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={practiceChartData} layout="vertical" margin={{ left: 20, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" />
-                <YAxis type="category" dataKey="practice_name" width={120} />
-                <Tooltip />
-                <Bar dataKey="total_count" radius={[0, 6, 6, 0]}>
-                  {practiceChartData.map((entry) => (
-                    <Cell key={entry.practice_name} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {practiceChartData.length === 0 ? (
+            <p className="py-12 text-center text-sm text-gray-500">No practice data for this period.</p>
+          ) : (
+            <div className="h-[300px] md:h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={practiceChartData} layout="vertical" margin={{ left: 20, right: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" />
+                  <YAxis type="category" dataKey="practice_name" width={120} />
+                  <Tooltip />
+                  <Bar dataKey="total_count" radius={[0, 6, 6, 0]}>
+                    {practiceChartData.map((entry) => (
+                      <Cell key={entry.practice_name} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h2 className="mb-3 text-sm font-semibold text-gray-900">Daily trend</h2>
-        <div className="h-64 md:h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={dailyTrend} margin={{ left: 8, right: 8 }}>
-              <defs>
-                <linearGradient id="tealFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0D9488" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#0D9488" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Area type="monotone" dataKey="total_appointments" stroke="#0D9488" fill="url(#tealFill)" />
-              <Line type="monotone" dataKey="total_appointments" stroke="#0D9488" dot />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+        {dailyTrend.length === 0 ? (
+          <p className="py-12 text-center text-sm text-gray-500">No daily data for this period.</p>
+        ) : (
+          <div className="h-64 md:h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={dailyTrend} margin={{ left: 8, right: 8 }}>
+                <defs>
+                  <linearGradient id="tealFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0D9488" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#0D9488" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Area type="monotone" dataKey="total_appointments" stroke="#0D9488" fill="url(#tealFill)" />
+                <Line type="monotone" dataKey="total_appointments" stroke="#0D9488" dot />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
@@ -400,18 +412,26 @@ export function ReportingDashboardClient({
               </tr>
             </thead>
             <tbody>
-              {clinicianBreakdown.map((row, idx) => (
-                <tr
-                  key={`${row.clinician_name}-${idx}`}
-                  className="border-b border-gray-100 hover:bg-gray-50"
-                >
-                  <td className="px-3 py-2">{row.clinician_name}</td>
-                  <td className="px-3 py-2">{row.total_appointments}</td>
-                  <td className="px-3 py-2">{row.total_hours}</td>
-                  <td className="px-3 py-2">{row.practices_covered}</td>
-                  <td className="px-3 py-2">{row.log_count}</td>
+              {clinicianBreakdown.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
+                    No clinician data for this period.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                clinicianBreakdown.map((row, idx) => (
+                  <tr
+                    key={`${row.clinician_name}-${idx}`}
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    <td className="px-3 py-2">{row.clinician_name}</td>
+                    <td className="px-3 py-2">{row.total_appointments}</td>
+                    <td className="px-3 py-2">{row.total_hours}</td>
+                    <td className="px-3 py-2">{row.practices_covered}</td>
+                    <td className="px-3 py-2">{row.log_count}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -420,22 +440,26 @@ export function ReportingDashboardClient({
       <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h2 className="mb-3 text-sm font-semibold text-gray-900">Recent activity</h2>
         <div className="flex min-w-0 flex-col gap-2">
-          {recentLogs.map((log, idx) => (
-            <div
-              key={`${log.clinician_name}-${log.log_date}-${idx}`}
-              className="w-full min-w-0 rounded-xl border border-gray-100 px-3 py-3"
-            >
-              <p className="text-sm font-medium text-gray-900">
-                {log.clinician_name} · {log.practice_name}
-              </p>
-              <p className="text-xs text-gray-500">
-                {log.log_date} · {log.hours_worked}h
-              </p>
-              <p className="text-xs text-gray-600">
-                {log.categories.map((c) => `${c.name} x ${c.count}`).join(' · ')}
-              </p>
-            </div>
-          ))}
+          {recentLogs.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-500">No recent activity for this period.</p>
+          ) : (
+            recentLogs.map((log, idx) => (
+              <div
+                key={`${log.clinician_name}-${log.log_date}-${idx}`}
+                className="w-full min-w-0 rounded-xl border border-gray-100 px-3 py-3"
+              >
+                <p className="text-sm font-medium text-gray-900">
+                  {log.clinician_name} · {log.practice_name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {log.log_date} · {log.hours_worked}h
+                </p>
+                <p className="text-xs text-gray-600">
+                  {log.categories.map((c) => `${c.name} x ${c.count}`).join(' · ')}
+                </p>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

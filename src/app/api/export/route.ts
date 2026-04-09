@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { getProfile } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
 function csvCell(value: unknown): string {
@@ -9,8 +8,11 @@ function csvCell(value: unknown): string {
 }
 
 export async function GET(request: Request) {
-  await getProfile();
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const { searchParams } = new URL(request.url);
   const today = new Date();

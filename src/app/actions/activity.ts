@@ -29,6 +29,30 @@ export async function saveActivityLog(input: SaveActivityLogInput): Promise<Save
   if (nonZeroEntries.length === 0) {
     return { success: false, error: 'Please enter at least one appointment count.' }
   }
+
+  // Verify practice belongs to user's organisation
+  const { data: practice } = await supabase
+    .from('practices')
+    .select('id')
+    .eq('id', input.practice_id)
+    .eq('organisation_id', profile.organisation_id)
+    .maybeSingle()
+  if (!practice) {
+    return { success: false, error: 'Invalid practice.' }
+  }
+
+  // Verify all categories belong to user's organisation
+  if (nonZeroEntries.length > 0) {
+    const { data: validCats } = await supabase
+      .from('activity_categories')
+      .select('id')
+      .eq('organisation_id', profile.organisation_id)
+      .in('id', nonZeroEntries.map((e) => e.category_id))
+    if (!validCats || validCats.length !== nonZeroEntries.length) {
+      return { success: false, error: 'Invalid category.' }
+    }
+  }
+
   const { data: logData, error: logError } = await supabase
     .from('activity_logs')
     .upsert(
@@ -99,6 +123,29 @@ export async function bulkSaveActivityLogs(
   const nonZeroEntries = input.entries.filter((e) => e.count > 0)
   if (nonZeroEntries.length === 0) {
     return { success: false, error: 'Please enter at least one appointment count.' }
+  }
+
+  // Verify practice belongs to user's organisation
+  const { data: practice } = await supabase
+    .from('practices')
+    .select('id')
+    .eq('id', input.practice_id)
+    .eq('organisation_id', profile.organisation_id)
+    .maybeSingle()
+  if (!practice) {
+    return { success: false, error: 'Invalid practice.' }
+  }
+
+  // Verify all clinician_ids belong to user's organisation via clinician_practices
+  const { data: validClinicians } = await supabase
+    .from('clinician_practices')
+    .select('clinician_id')
+    .in('clinician_id', input.clinician_ids)
+    .eq('practice_id', input.practice_id)
+  const validClinicianIds = new Set((validClinicians ?? []).map((c) => c.clinician_id))
+  const invalidIds = input.clinician_ids.filter((id) => !validClinicianIds.has(id))
+  if (invalidIds.length > 0) {
+    return { success: false, error: 'One or more clinicians are not valid for this practice.' }
   }
 
   for (const clinician_id of input.clinician_ids) {

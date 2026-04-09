@@ -72,9 +72,9 @@ export function SettingsPageClient({
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [profileFlash, setProfileFlash] = useState<string | null>(null);
-  const [orgFlash, setOrgFlash] = useState<string | null>(null);
-  const [catFlash, setCatFlash] = useState<string | null>(null);
+  const [profileFlash, setProfileFlash] = useState<{ message: string; ok: boolean } | null>(null);
+  const [orgFlash, setOrgFlash] = useState<{ message: string; ok: boolean } | null>(null);
+  const [catFlash, setCatFlash] = useState<{ message: string; ok: boolean } | null>(null);
 
   const [orgName, setOrgName] = useState(organisationName);
   const [orgDailyHours, setOrgDailyHours] = useState(String(defaultDailyHours));
@@ -112,7 +112,7 @@ export function SettingsPageClient({
     setProfileFlash(null);
     startTransition(async () => {
       const r = await updateProfile(fd);
-      setProfileFlash(r.success ? "Profile saved." : r.error);
+      setProfileFlash(r.success ? { message: "Profile saved.", ok: true } : { message: r.error, ok: false });
       if (r.success) router.refresh();
     });
   };
@@ -132,7 +132,7 @@ export function SettingsPageClient({
     setOrgFlash(null);
     startTransition(async () => {
       const r = await updateOrganisation(fd);
-      setOrgFlash(r.success ? "Organisation saved." : r.error);
+      setOrgFlash(r.success ? { message: "Organisation saved.", ok: true } : { message: r.error, ok: false });
       if (r.success) router.refresh();
     });
   };
@@ -146,10 +146,10 @@ export function SettingsPageClient({
       const r = await createCategory(fd);
       if (r.success) {
         setNewCatName("");
-        setCatFlash("Category added.");
+        setCatFlash({ message: "Category added.", ok: true });
         router.refresh();
       } else {
-        setCatFlash(r.error);
+        setCatFlash({ message: r.error, ok: false });
       }
     });
   };
@@ -161,7 +161,7 @@ export function SettingsPageClient({
     setCatFlash(null);
     startTransition(async () => {
       const r = await updateCategory(fd);
-      setCatFlash(r.success ? "Category updated." : r.error);
+      setCatFlash(r.success ? { message: "Category updated.", ok: true } : { message: r.error, ok: false });
       if (r.success) router.refresh();
     });
   };
@@ -172,7 +172,7 @@ export function SettingsPageClient({
     setCatFlash(null);
     startTransition(async () => {
       const r = await archiveCategory(fd);
-      setCatFlash(r.success ? "Category archived." : r.error);
+      setCatFlash(r.success ? { message: "Category archived.", ok: true } : { message: r.error, ok: false });
       if (r.success) router.refresh();
     });
   };
@@ -183,7 +183,7 @@ export function SettingsPageClient({
     setCatFlash(null);
     startTransition(async () => {
       const r = await unarchiveCategory(fd);
-      setCatFlash(r.success ? "Category restored." : r.error);
+      setCatFlash(r.success ? { message: "Category restored.", ok: true } : { message: r.error, ok: false });
       if (r.success) router.refresh();
     });
   };
@@ -196,7 +196,7 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await reorderCategory(fd);
       if (!r.success) {
-        setCatFlash(r.error);
+        setCatFlash({ message: r.error, ok: false });
       } else {
         router.refresh();
       }
@@ -262,13 +262,10 @@ export function SettingsPageClient({
             </div>
             {profileFlash ? (
               <p
-                className={`text-sm ${
-                  profileFlash === "Profile saved."
-                    ? "text-emerald-700"
-                    : "text-red-600"
-                }`}
+                className={`text-sm ${profileFlash.ok ? "text-emerald-700" : "text-red-600"}`}
+                role="alert"
               >
-                {profileFlash}
+                {profileFlash.message}
               </p>
             ) : null}
             <Button
@@ -352,9 +349,10 @@ export function SettingsPageClient({
                 </p>
                 {orgFlash ? (
                   <p
-                    className={`text-sm ${orgFlash.includes("Could") || orgFlash.includes("required") || orgFlash.includes("must") ? "text-red-600" : "text-emerald-700"}`}
+                    className={`text-sm ${orgFlash.ok ? "text-emerald-700" : "text-red-600"}`}
+                    role="alert"
                   >
-                    {orgFlash}
+                    {orgFlash.message}
                   </p>
                 ) : null}
                 <Button
@@ -401,9 +399,10 @@ export function SettingsPageClient({
 
               {catFlash ? (
                 <p
-                  className={`text-sm ${catFlash.includes("Could") || catFlash.includes("already") || catFlash.includes("required") ? "text-red-600" : "text-emerald-700"}`}
+                  className={`text-sm ${catFlash.ok ? "text-emerald-700" : "text-red-600"}`}
+                  role="alert"
                 >
-                  {catFlash}
+                  {catFlash.message}
                 </p>
               ) : null}
 
