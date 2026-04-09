@@ -11,10 +11,12 @@ export default async function AppLayout({
   const nav = await getNavContext();
 
   const practiceName = nav?.practiceName ?? "ReportRx";
+  const canAccessCliniciansDirectory = profile.role !== "clinician";
 
   return (
     <AppLayoutClient
       canAccessAdmin={profile.role === "admin" || profile.role === "superadmin"}
+      canAccessCliniciansDirectory={canAccessCliniciansDirectory}
       profile={{
         full_name: profile.full_name ?? "User",
         email: profile.email ?? "",

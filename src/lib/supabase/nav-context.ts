@@ -1,8 +1,7 @@
+import { formatRoleLabel } from "@/lib/role-format";
+
 import { createClient } from "./server";
-import {
-  formatRoleLabel,
-  getAuthProfile,
-} from "./auth-profile";
+import { getAuthProfile } from "./auth-profile";
 
 export type NavContext = {
   practiceName: string;

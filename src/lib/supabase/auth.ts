@@ -7,7 +7,13 @@ export type Profile = {
   organisation_id: string
   full_name: string
   email: string
-  role: 'clinician' | 'manager' | 'admin' | 'superadmin'
+  role:
+    | 'clinician'
+    | 'manager'
+    | 'practice_manager'
+    | 'pcn_manager'
+    | 'admin'
+    | 'superadmin'
   is_active: boolean
 }
 

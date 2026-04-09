@@ -12,6 +12,7 @@ type Props = {
   onClose: () => void;
   practiceName: string;
   canAccessAdmin: boolean;
+  canAccessCliniciansDirectory: boolean;
   profile: {
     full_name: string;
     email: string;
@@ -59,6 +60,7 @@ export function MobileDrawer({
   onClose,
   practiceName,
   canAccessAdmin,
+  canAccessCliniciansDirectory,
   profile,
   signOutAction,
 }: Props) {
@@ -69,11 +71,16 @@ export function MobileDrawer({
     return pathname.startsWith(href);
   };
 
-  const allItems = canAccessAdmin ? [...appNavItems, appNavAdminItem] : appNavItems;
+  const navItems = canAccessCliniciansDirectory
+    ? appNavItems
+    : appNavItems.filter((item) => item.href !== "/clinicians");
+  const allItems = canAccessAdmin ? [...navItems, appNavAdminItem] : navItems;
 
   const roleLabels: Record<string, string> = {
     clinician: "Clinician",
     manager: "Manager",
+    practice_manager: "Practice Manager",
+    pcn_manager: "PCN Manager",
     admin: "Admin",
     superadmin: "Super Admin",
   };

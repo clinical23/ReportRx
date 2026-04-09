@@ -33,6 +33,166 @@ export async function listClinicians(): Promise<ClinicianListItem[]> {
   }));
 }
 
+/** Team directory row (profiles + last log + practices via clinician_practices). */
+export type TeamMemberRow = {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+  last_activity_date: string | null;
+  practices_label: string;
+};
+
+/**
+ * All profiles in an organisation with last activity (max weekday log_date per profile / clinician_id)
+ * and practice names from `clinician_practices` (junction; legacy name in product copy may say "assignments").
+ */
+export async function listOrganisationTeamMembers(
+  organisationId: string,
+): Promise<TeamMemberRow[]> {
+  const supabase = await createClient();
+  const { data: profiles, error: profErr } = await supabase
+    .from("profiles")
+    .select(
+      "id, full_name, email, role, is_active, clinician_id, practice_id",
+    )
+    .eq("organisation_id", organisationId)
+    .order("full_name", { ascending: true });
+
+  if (profErr) {
+    console.error("[listOrganisationTeamMembers] profiles", profErr.message);
+    return [];
+  }
+
+  const rows = profiles ?? [];
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const clinicianIdsForLinks = [
+    ...new Set(
+      rows
+        .map((r) => r.clinician_id as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  let links: { clinician_id: string; practice_id: string }[] = [];
+  if (clinicianIdsForLinks.length > 0) {
+    const { data: linkRows, error: linkErr } = await supabase
+      .from("clinician_practices")
+      .select("clinician_id, practice_id")
+      .in("clinician_id", clinicianIdsForLinks);
+    if (linkErr) {
+      console.error(
+        "[listOrganisationTeamMembers] clinician_practices",
+        linkErr.message,
+      );
+    } else {
+      links = (linkRows ?? []) as {
+        clinician_id: string;
+        practice_id: string;
+      }[];
+    }
+  }
+
+  const { data: practiceRows, error: prErr } = await supabase
+    .from("practices")
+    .select("id, name");
+  if (prErr) {
+    console.error("[listOrganisationTeamMembers] practices", prErr.message);
+  }
+  const practiceNameById = new Map<string, string>();
+  for (const p of practiceRows ?? []) {
+    const row = p as { id: string; name: string };
+    practiceNameById.set(row.id, row.name?.trim() || "—");
+  }
+
+  const practiceIdsByClinicianId = new Map<string, string[]>();
+  for (const link of links) {
+    const list = practiceIdsByClinicianId.get(link.clinician_id) ?? [];
+    list.push(link.practice_id);
+    practiceIdsByClinicianId.set(link.clinician_id, list);
+  }
+
+  const logIdKeys = new Set<string>();
+  for (const p of rows) {
+    logIdKeys.add(String(p.id));
+    if (p.clinician_id) {
+      logIdKeys.add(String(p.clinician_id));
+    }
+  }
+  const lastLogByClinicianKey = new Map<string, string>();
+  const logKeyArr = [...logIdKeys];
+  if (logKeyArr.length > 0) {
+    const { data: logRows, error: logErr } = await supabase
+      .from("activity_logs")
+      .select("clinician_id, log_date")
+      .in("clinician_id", logKeyArr);
+    if (logErr) {
+      console.error("[listOrganisationTeamMembers] activity_logs", logErr.message);
+    } else {
+      for (const row of logRows ?? []) {
+        const cid = row.clinician_id == null ? "" : String(row.clinician_id);
+        const d = String(row.log_date ?? "").slice(0, 10);
+        if (!cid || !d) continue;
+        const prev = lastLogByClinicianKey.get(cid);
+        if (!prev || d > prev) {
+          lastLogByClinicianKey.set(cid, d);
+        }
+      }
+    }
+  }
+
+  const maxDate = (a: string | undefined, b: string | undefined): string | null => {
+    if (!a && !b) return null;
+    if (!a) return b ?? null;
+    if (!b) return a;
+    return a > b ? a : b;
+  };
+
+  return rows.map((p) => {
+    const name = String(p.full_name ?? "").trim() || "—";
+    const email = String(p.email ?? "").trim() || "—";
+    const cid = p.clinician_id ? String(p.clinician_id) : null;
+    const pidKey = String(p.id);
+
+    const lastActivity = maxDate(
+      lastLogByClinicianKey.get(pidKey),
+      cid ? lastLogByClinicianKey.get(cid) : undefined,
+    );
+
+    const practiceNames = new Set<string>();
+    if (cid) {
+      const pids = practiceIdsByClinicianId.get(cid) ?? [];
+      for (const prid of pids) {
+        const nm = practiceNameById.get(prid);
+        if (nm) practiceNames.add(nm);
+      }
+    }
+    const homePracticeId = p.practice_id as string | null;
+    if (homePracticeId) {
+      const nm = practiceNameById.get(homePracticeId);
+      if (nm) practiceNames.add(nm);
+    }
+    const practices_label = [...practiceNames].sort().join(", ") || "—";
+
+    const rawActive = (p as { is_active?: boolean | null }).is_active;
+    const is_active = rawActive !== false;
+
+    return {
+      id: String(p.id),
+      full_name: name,
+      email,
+      role: String(p.role ?? "clinician"),
+      is_active,
+      last_activity_date: lastActivity,
+      practices_label,
+    };
+  });
+}
+
 export type PcnListItem = {
   id: string;
   name: string;

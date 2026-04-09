@@ -16,6 +16,7 @@ type Profile = {
 type Props = {
   children: React.ReactNode;
   canAccessAdmin: boolean;
+  canAccessCliniciansDirectory: boolean;
   profile: Profile;
   practiceName: string;
 };
@@ -23,6 +24,7 @@ type Props = {
 export function AppLayoutClient({
   children,
   canAccessAdmin,
+  canAccessCliniciansDirectory,
   profile,
   practiceName,
 }: Props) {
@@ -31,6 +33,7 @@ export function AppLayoutClient({
   const sidebarProps = {
     practiceName,
     canAccessAdmin,
+    canAccessCliniciansDirectory,
     profile,
     signOutAction,
   };
@@ -51,6 +54,7 @@ export function AppLayoutClient({
         onClose={() => setDrawerOpen(false)}
         practiceName={practiceName}
         canAccessAdmin={canAccessAdmin}
+        canAccessCliniciansDirectory={canAccessCliniciansDirectory}
         profile={profile}
         signOutAction={signOutAction}
       />

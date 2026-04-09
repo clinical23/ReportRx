@@ -7,6 +7,7 @@ import { appNavAdminItem, appNavItems } from "@/components/layout/app-nav-items"
 type Props = {
   practiceName: string;
   canAccessAdmin: boolean;
+  canAccessCliniciansDirectory: boolean;
   profile: {
     full_name: string;
     email: string;
@@ -18,12 +19,16 @@ type Props = {
 export default function AppSidebar({
   practiceName,
   canAccessAdmin,
+  canAccessCliniciansDirectory,
   profile,
   signOutAction,
 }: Props) {
   const pathname = usePathname();
 
-  const allItems = canAccessAdmin ? [...appNavItems, appNavAdminItem] : appNavItems;
+  const navItems = canAccessCliniciansDirectory
+    ? appNavItems
+    : appNavItems.filter((item) => item.href !== "/clinicians");
+  const allItems = canAccessAdmin ? [...navItems, appNavAdminItem] : navItems;
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -40,6 +45,8 @@ export default function AppSidebar({
   const roleLabels: Record<string, string> = {
     clinician: "Clinician",
     manager: "Manager",
+    practice_manager: "Practice Manager",
+    pcn_manager: "PCN Manager",
     admin: "Admin",
     superadmin: "Super Admin",
   };

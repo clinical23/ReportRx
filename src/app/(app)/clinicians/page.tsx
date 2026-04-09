@@ -1,34 +1,31 @@
+import { redirect } from "next/navigation";
+
 import { CliniciansView } from "@/components/clinicians/clinicians-view";
-import { listPractices } from "@/lib/supabase/activity";
-import { getAuthProfile } from "@/lib/supabase/auth-profile";
-import { listClinicianTypes } from "@/lib/supabase/clinician-types";
-import { getClinicians, listPcns } from "@/lib/supabase/data";
-import { getUserPermissions } from "@/lib/supabase/permissions";
+import { getProfile, requireRole } from "@/lib/supabase/auth";
+import { listOrganisationTeamMembers } from "@/lib/supabase/data";
 
 export const dynamic = "force-dynamic";
 
 export default async function CliniciansPage() {
-  const session = await getAuthProfile();
-  const userId = session?.user?.id ?? "";
+  const profile = await getProfile();
 
-  const [clinicians, practices, pcns, clinicianTypes, permissions] =
-    await Promise.all([
-      getClinicians(),
-      listPractices(),
-      listPcns(),
-      listClinicianTypes(),
-      userId ? getUserPermissions(userId) : Promise.resolve([] as string[]),
-    ]);
+  if (profile.role === "clinician") {
+    redirect("/activity");
+  }
+
+  await requireRole(
+    "manager",
+    "practice_manager",
+    "pcn_manager",
+    "admin",
+    "superadmin",
+  );
+
+  const members = await listOrganisationTeamMembers(profile.organisation_id);
 
   return (
     <div className="min-w-0">
-      <CliniciansView
-        clinicians={clinicians}
-        practices={practices}
-        pcns={pcns}
-        permissions={permissions}
-        clinicianTypes={clinicianTypes}
-      />
+      <CliniciansView members={members} />
     </div>
   );
 }
