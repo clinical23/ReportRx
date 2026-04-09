@@ -13,13 +13,14 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll()
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, _responseHeaders) {
+          void _responseHeaders
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             )
           } catch {
-            // Ignore errors in server components (read-only)
+            // Server Components are often read-only; middleware persists refreshed cookies.
           }
         },
       },

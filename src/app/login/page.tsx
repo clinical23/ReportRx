@@ -1,12 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const run = async () => {
+      const supabase = createClient()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!cancelled && session?.user) {
+        router.replace('/')
+      }
+    }
+
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,11 +59,11 @@ export default function LoginPage() {
       <div className="mx-4 w-full max-w-sm md:mx-auto">
         {/* Logo / Brand */}
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-teal-600 mb-4">
-            <span className="text-white font-bold text-lg">Rx</span>
+          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-teal-600">
+            <span className="text-lg font-bold text-white">Rx</span>
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">ReportRx</h1>
-          <p className="text-sm text-gray-500 mt-1">Clinical activity tracking for primary care</p>
+          <p className="mt-1 text-sm text-gray-500">Clinical activity tracking for primary care</p>
         </div>
 
         {/* Login card */}
@@ -53,7 +75,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
                 Email address
               </label>
               <input
@@ -79,20 +101,20 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {message && (
+          {message ? (
             <div
-              className={`mt-4 px-4 py-3 rounded-lg text-sm ${
+              className={`mt-4 rounded-lg px-4 py-3 text-sm ${
                 message.type === 'success'
-                  ? 'bg-green-50 text-green-800 border border-green-200'
-                  : 'bg-red-50 text-red-800 border border-red-200'
+                  ? 'border border-green-200 bg-green-50 text-green-800'
+                  : 'border border-red-200 bg-red-50 text-red-800'
               }`}
             >
               {message.text}
             </div>
-          )}
+          ) : null}
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
+        <p className="mt-6 text-center text-xs text-gray-400">
           By signing in, you agree to ReportRx&apos;s terms of service.
         </p>
       </div>
