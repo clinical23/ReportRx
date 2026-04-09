@@ -15,6 +15,7 @@ export type Profile = {
     | 'admin'
     | 'superadmin'
   is_active: boolean
+  clinician_id: string | null
 }
 
 // Get the current authenticated user's profile (server-side only)
@@ -29,7 +30,7 @@ export async function getProfile(): Promise<Profile> {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('id, organisation_id, full_name, email, role, is_active')
+    .select('id, organisation_id, full_name, email, role, is_active, clinician_id')
     .eq('id', user.id)
     .single()
 

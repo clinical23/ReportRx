@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { PersonalCategoryChart } from "@/components/dashboard/personal-category-chart";
 import {
   Card,
   CardContent,
@@ -16,13 +17,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   formatDateMediumUK,
+  formatMonthLabelUK,
   formatRelativeDayLabelUK,
+  londonMonthRangeISO,
 } from "@/lib/datetime";
 import { getDashboardSnapshot } from "@/lib/supabase/activity";
+import { getProfile } from "@/lib/supabase/auth";
 import { getAuthProfile } from "@/lib/supabase/auth-profile";
 import { getPracticeScopeIdsForSession } from "@/lib/supabase/practice-scope";
+import {
+  getMyCategoryBreakdown,
+  getMyRecentLogs,
+  getMyStats,
+} from "@/lib/supabase/reporting";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -95,15 +105,171 @@ function StatTile({
   return content;
 }
 
+function myClinicianKeys(profile: {
+  id: string;
+  clinician_id: string | null;
+}): string[] {
+  return [
+    ...new Set(
+      [profile.id, profile.clinician_id].filter((x): x is string => Boolean(x)),
+    ),
+  ];
+}
+
 export default async function DashboardPage() {
+  const profile = await getProfile();
+
+  const firstName =
+    profile.full_name?.trim().split(/\s+/)[0] ??
+    profile.email?.split("@")[0] ??
+    "there";
+
+  if (profile.role === "clinician") {
+    const { from, to } = londonMonthRangeISO();
+    const monthLabel = formatMonthLabelUK(from.slice(0, 7));
+    const keys = myClinicianKeys(profile);
+
+    const [myStats, myCategories, myRecent] = await Promise.all([
+      getMyStats(keys, from, to),
+      getMyCategoryBreakdown(keys, from, to),
+      getMyRecentLogs(10, keys),
+    ]);
+
+    const personalKpis = [
+      {
+        label: "My total appointments",
+        value: myStats.totalAppointments.toLocaleString("en-GB"),
+        hint: `In ${monthLabel} (all practices)`,
+        icon: Calendar,
+        accent: "teal" as const,
+      },
+      {
+        label: "My hours logged",
+        value:
+          myStats.totalHours > 0
+            ? `${myStats.totalHours.toLocaleString("en-GB", {
+                maximumFractionDigits: 1,
+              })}h`
+            : "—",
+        hint: "From your activity logs this month",
+        icon: Clock,
+        accent: "blue" as const,
+      },
+      {
+        label: "Practices I covered",
+        value: String(myStats.practicesCovered),
+        hint: "Distinct practices in your logs",
+        icon: Building2,
+        accent: "violet" as const,
+      },
+      {
+        label: "Days logged this month",
+        value: String(myStats.daysLogged),
+        hint: "Distinct calendar days with a log",
+        icon: FileStack,
+        accent: "emerald" as const,
+      },
+    ];
+
+    return (
+      <div className="mx-auto min-w-0 max-w-6xl space-y-8">
+        <div className="relative w-full overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-teal-50 via-white to-gray-50/80 p-4 shadow-sm sm:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="max-w-2xl">
+              <h1 className="text-2xl font-semibold text-gray-900 sm:text-3xl">
+                My Activity This Month
+              </h1>
+              <p className="mt-2 text-sm text-gray-500">
+                Welcome back, {firstName}. Here&apos;s your personal summary for{" "}
+                {monthLabel}.
+              </p>
+            </div>
+            <Button
+              asChild
+              className="h-11 shrink-0 bg-teal-600 px-6 text-base font-medium text-white shadow-sm hover:bg-teal-700 sm:h-12"
+            >
+              <Link href="/activity">Log Today&apos;s Activity</Link>
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {personalKpis.map((m) => (
+            <StatTile key={m.label} {...m} />
+          ))}
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">My appointments by category</CardTitle>
+            <CardDescription>
+              Total appointments logged this month, split by category.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PersonalCategoryChart data={myCategories} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <CardTitle className="text-base">My recent logs</CardTitle>
+                <CardDescription>Your last ten activity submissions.</CardDescription>
+              </div>
+              {myRecent.length > 0 && (
+                <Link
+                  href="/activity"
+                  className="shrink-0 text-xs font-medium text-teal-700 hover:underline"
+                >
+                  View all →
+                </Link>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {myRecent.length === 0 ? (
+              <p className="text-sm text-gray-600">
+                You haven&apos;t logged activity this month yet.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {myRecent.map((log, idx) => (
+                  <div
+                    key={`${log.log_date}-${log.practice_name}-${idx}`}
+                    className="rounded-xl border border-gray-100 bg-white px-3 py-3 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="text-sm font-medium text-gray-900">
+                        {log.practice_name}
+                      </p>
+                      <Link
+                        href={`/activity/day?date=${log.log_date.slice(0, 10)}`}
+                        className="text-xs text-teal-700 hover:underline"
+                      >
+                        {formatRelativeDayLabelUK(log.log_date)} ·{" "}
+                        {formatDateMediumUK(log.log_date)}
+                      </Link>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {log.hours_worked}h ·{" "}
+                      {log.categories.map((c) => `${c.name} × ${c.count}`).join(" · ")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  /* Team dashboard: managers, admins, superadmins */
   const session = await getAuthProfile();
   const scope = await getPracticeScopeIdsForSession(session);
   const snap = await getDashboardSnapshot(scope);
-
-  const firstName =
-    session?.profile?.full_name?.trim().split(/\s+/)[0] ??
-    session?.user.email?.split("@")[0] ??
-    "there";
 
   const row1 = [
     {
@@ -202,8 +368,7 @@ export default async function DashboardPage() {
             <div className="min-w-0">
               <CardTitle className="text-base">Recent activity</CardTitle>
               <CardDescription>
-                Latest activity log entries (appointments summed per
-                submission).
+                Latest activity log entries (appointments summed per submission).
               </CardDescription>
             </div>
             {snap.recentEntries.length > 0 && (

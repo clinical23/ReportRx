@@ -195,6 +195,166 @@ export async function getDataCompleteness(
   )
 }
 
+export type MyActivitySummary = {
+  totalAppointments: number
+  totalHours: number
+  practicesCovered: number
+  daysLogged: number
+  totalLogs: number
+}
+
+function clinicianKeySet(clinicianIds: readonly string[]): Set<string> {
+  return new Set(clinicianIds.map((id) => id.trim()).filter(Boolean))
+}
+
+function filterRowsForClinicians(
+  rows: ActivityReportRow[],
+  keys: Set<string>,
+): ActivityReportRow[] {
+  if (keys.size === 0) return []
+  return rows.filter(
+    (r) => r.clinician_id != null && keys.has(String(r.clinician_id)),
+  )
+}
+
+/**
+ * Personal reporting metrics for the given activity_report clinician_id value(s).
+ * Pass profile.id and profiles.clinician_id when both may appear on logs.
+ */
+export async function getMyStats(
+  clinicianIds: readonly string[],
+  startDate: string,
+  endDate: string,
+): Promise<MyActivitySummary> {
+  const empty: MyActivitySummary = {
+    totalAppointments: 0,
+    totalHours: 0,
+    practicesCovered: 0,
+    daysLogged: 0,
+    totalLogs: 0,
+  }
+  const keys = clinicianKeySet(clinicianIds)
+  if (keys.size === 0) return empty
+
+  const rows = filterRowsForClinicians(
+    await fetchRowsForRange(startDate, endDate),
+    keys,
+  )
+
+  const totalAppointments = rows.reduce(
+    (sum, row) => sum + Number(row.appointment_count ?? 0),
+    0,
+  )
+  const uniqueLogs = new Set(rows.map((r) => r.log_id).filter(Boolean))
+  const uniqueDays = new Set(
+    rows.map((r) => r.log_date?.slice(0, 10)).filter(Boolean),
+  )
+  const practices = new Set(
+    rows
+      .map((r) => (r.practice_name ?? '').trim())
+      .filter((name) => name.length > 0),
+  )
+  const totalHours = Array.from(hoursByUniqueLog(rows).values()).reduce(
+    (sum, h) => sum + h,
+    0,
+  )
+
+  return {
+    totalAppointments,
+    totalHours: Math.round(totalHours * 10) / 10,
+    practicesCovered: practices.size,
+    daysLogged: uniqueDays.size,
+    totalLogs: uniqueLogs.size,
+  }
+}
+
+export async function getMyCategoryBreakdown(
+  clinicianIds: readonly string[],
+  startDate: string,
+  endDate: string,
+): Promise<CategoryBreakdownItem[]> {
+  const keys = clinicianKeySet(clinicianIds)
+  if (keys.size === 0) return []
+
+  const rows = filterRowsForClinicians(
+    await fetchRowsForRange(startDate, endDate),
+    keys,
+  )
+  const totals = new Map<string, number>()
+  let grandTotal = 0
+
+  for (const row of rows) {
+    const name = (row.category_name ?? 'Uncategorised').trim() || 'Uncategorised'
+    const count = Number(row.appointment_count ?? 0)
+    totals.set(name, (totals.get(name) ?? 0) + count)
+    grandTotal += count
+  }
+
+  return Array.from(totals.entries())
+    .map(([category_name, total_count]) => ({
+      category_name,
+      total_count,
+      percentage:
+        grandTotal > 0 ? Math.round((total_count / grandTotal) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.total_count - a.total_count)
+}
+
+export async function getMyRecentLogs(
+  limit: number,
+  clinicianIds: readonly string[],
+): Promise<RecentLogItem[]> {
+  const keys = clinicianKeySet(clinicianIds)
+  if (keys.size === 0) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('activity_report')
+    .select(
+      'log_id, log_date, hours_worked, clinician_id, clinician_name, practice_name, category_name, appointment_count, submitted_at',
+    )
+    .order('submitted_at', { ascending: false })
+    .limit(300)
+
+  if (error) {
+    console.error('[getMyRecentLogs]', error.message)
+    return []
+  }
+
+  const filtered = filterRowsForClinicians(
+    (data ?? []) as ActivityReportRow[],
+    keys,
+  )
+
+  const grouped = new Map<string, RecentLogItem>()
+  for (const row of filtered) {
+    if (!row.log_id) continue
+    if (!grouped.has(row.log_id)) {
+      grouped.set(row.log_id, {
+        clinician_name:
+          (row.clinician_name ?? 'Unknown clinician').trim() ||
+          'Unknown clinician',
+        practice_name:
+          (row.practice_name ?? 'Unknown practice').trim() || 'Unknown practice',
+        log_date: row.log_date?.slice(0, 10) ?? '',
+        hours_worked: Number(row.hours_worked ?? 0),
+        categories: [],
+      })
+    }
+    const g = grouped.get(row.log_id)
+    if (!g) continue
+    g.categories.push({
+      name: (row.category_name ?? 'Uncategorised').trim() || 'Uncategorised',
+      count: Number(row.appointment_count ?? 0),
+    })
+    if (!g.log_date && row.log_date) {
+      g.log_date = row.log_date.slice(0, 10)
+    }
+  }
+
+  return Array.from(grouped.values()).slice(0, limit)
+}
+
 async function fetchRowsForRange(
   startDate: string,
   endDate: string,
