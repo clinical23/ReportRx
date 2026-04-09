@@ -27,6 +27,8 @@ type Props = {
   clinicianDisplayName: string;
   /** Initial practice from profile.practice_id */
   defaultPracticeId: string | null;
+  /** From organisations.settings.default_hours_per_day */
+  defaultHoursPerDay?: number;
 };
 
 type CountMap = Record<string, number>;
@@ -101,6 +103,11 @@ function CategoryStepperRow({
   );
 }
 
+function formatHoursInitial(value: number): string {
+  const n = Math.round(value * 1000) / 1000;
+  return Number.isInteger(n) ? String(n) : String(n);
+}
+
 export default function ActivityLogForm({
   clinicians,
   practices,
@@ -109,6 +116,7 @@ export default function ActivityLogForm({
   clinicianRecordId,
   clinicianDisplayName,
   defaultPracticeId,
+  defaultHoursPerDay = 7.5,
 }: Props) {
   const scopedPractices =
     variant === "clinician" &&
@@ -132,13 +140,17 @@ export default function ActivityLogForm({
   );
   const [practiceId, setPracticeId] = useState(initialPractice);
   const [logDate, setLogDate] = useState(todayISOInLondon());
-  const [hours, setHours] = useState<string>("7.5");
+  const [hours, setHours] = useState<string>(() =>
+    formatHoursInitial(defaultHoursPerDay),
+  );
   const [counts, setCounts] = useState<CountMap>({});
 
   const [bulkClinicianIds, setBulkClinicianIds] = useState<string[]>([]);
   const [bulkPracticeId, setBulkPracticeId] = useState(initialPractice);
   const [bulkDate, setBulkDate] = useState(todayISOInLondon());
-  const [bulkHours, setBulkHours] = useState<string>("7.5");
+  const [bulkHours, setBulkHours] = useState<string>(() =>
+    formatHoursInitial(defaultHoursPerDay),
+  );
   const [bulkCounts, setBulkCounts] = useState<CountMap>({});
 
   const [newCatName, setNewCatName] = useState("");

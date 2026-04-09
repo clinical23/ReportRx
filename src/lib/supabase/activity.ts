@@ -2,6 +2,7 @@ import {
   isIsoDateInLondonMonth,
   isIsoDateInRange,
 } from '@/lib/datetime'
+import { getProfile } from '@/lib/supabase/auth'
 import { createClient } from '@/lib/supabase/server'
 
 export type Practice = {
@@ -37,14 +38,44 @@ export async function listPractices(): Promise<Practice[]> {
 }
 
 export async function listActivityCategories(): Promise<ActivityCategory[]> {
+  const { organisation_id: organisationId } = await getProfile()
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('activity_categories')
     .select('id, name, sort_order')
     .eq('is_active', true)
+    .eq('organisation_id', organisationId)
     .order('sort_order')
   if (error) { console.error('[listActivityCategories]', error.message); return [] }
   return data ?? []
+}
+
+export type ActivityCategorySettingsRow = {
+  id: string
+  name: string
+  sort_order: number
+  is_active: boolean
+}
+
+/** All categories for the organisation (Settings UI), including archived. Admins only. */
+export async function listActivityCategoriesForSettings(): Promise<
+  ActivityCategorySettingsRow[]
+> {
+  const profile = await getProfile()
+  if (profile.role !== 'admin' && profile.role !== 'superadmin') {
+    return []
+  }
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('activity_categories')
+    .select('id, name, sort_order, is_active')
+    .eq('organisation_id', profile.organisation_id)
+    .order('sort_order', { ascending: true })
+  if (error) {
+    console.error('[listActivityCategoriesForSettings]', error.message)
+    return []
+  }
+  return (data ?? []) as ActivityCategorySettingsRow[]
 }
 
 export async function listRecentLogs(

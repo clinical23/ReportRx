@@ -4,7 +4,15 @@ import {
   getAuthProfile,
   isAppRole,
 } from "@/lib/supabase/auth-profile";
-import { listPractices, listActivityCategories, listRecentLogsGrouped } from '@/lib/supabase/activity'
+import {
+  listPractices,
+  listActivityCategories,
+  listRecentLogsGrouped,
+} from "@/lib/supabase/activity";
+import {
+  getOrganisationSettingsRecord,
+  parseDefaultHoursPerDay,
+} from "@/lib/report/org";
 import { getPracticeScopeIdsForSession } from '@/lib/supabase/practice-scope'
 import { listClinicians } from '@/lib/supabase/data'
 import ActivityLogForm from './ActivityLogForm'
@@ -31,12 +39,28 @@ export default async function ActivityPage() {
 
     const scope = await getPracticeScopeIdsForSession(session)
 
-    const [clinicians, practices, categories, recentLogs] = await Promise.all([
-      listClinicians(),
-      listPractices(),
-      listActivityCategories(),
-      listRecentLogsGrouped(10, scope),
-    ])
+    const profileOrgId =
+      profile &&
+      "organisation_id" in profile &&
+      typeof (profile as { organisation_id?: string }).organisation_id ===
+        "string"
+        ? (profile as { organisation_id: string }).organisation_id
+        : null
+
+    const orgRecordPromise = profileOrgId
+      ? getOrganisationSettingsRecord(profileOrgId)
+      : Promise.resolve(null)
+
+    const [clinicians, practices, categories, recentLogs, orgRecord] =
+      await Promise.all([
+        listClinicians(),
+        listPractices(),
+        listActivityCategories(),
+        listRecentLogsGrouped(10, scope),
+        orgRecordPromise,
+      ])
+
+    const defaultHoursPerDay = parseDefaultHoursPerDay(orgRecord?.settings ?? null)
 
     const clinicianRecordId: string | null = profile?.id ?? null
     let clinicianDisplayName = profile?.full_name ?? 'Clinician'
@@ -72,6 +96,7 @@ export default async function ActivityPage() {
           clinicianRecordId={clinicianRecordId}
           clinicianDisplayName={clinicianDisplayName}
           defaultPracticeId={profile?.practice_id ?? null}
+          defaultHoursPerDay={defaultHoursPerDay}
         />
         <RecentLogs logs={recentLogs} />
       </div>
