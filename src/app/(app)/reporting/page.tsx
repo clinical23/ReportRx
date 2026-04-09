@@ -1,46 +1,56 @@
-import { londonMonthRangeISO } from "@/lib/datetime";
+import { getProfile } from '@/lib/supabase/auth'
 import {
-  getReportingChartsData,
-  getReportingTable,
-} from "@/lib/supabase/activity";
-import { getAuthProfile } from "@/lib/supabase/auth-profile";
-import { getPracticeScopeIdsForSession } from "@/lib/supabase/practice-scope";
-
-import { ReportingLoader } from "./reporting-loader";
+  getAppointmentsByCategory,
+  getAppointmentsByPractice,
+  getClinicianBreakdown,
+  getDailyTrend,
+  getRecentLogs,
+  getReportingSummary,
+} from '@/lib/supabase/reporting'
+import { ReportingDashboardClient } from './reporting-dashboard-client'
 
 export const dynamic = "force-dynamic";
 
 export default async function ReportingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ start?: string; end?: string }>;
 }) {
-  const sp = await searchParams;
-  const def = londonMonthRangeISO();
-  const rawFrom = sp.from?.slice(0, 10);
-  const rawTo = sp.to?.slice(0, 10);
-  let from = rawFrom && rawFrom.length === 10 ? rawFrom : def.from;
-  let to = rawTo && rawTo.length === 10 ? rawTo : def.to;
-  if (from > to) {
-    const t = from;
-    from = to;
-    to = t;
-  }
+  await getProfile()
+  const sp = await searchParams
 
-  const session = await getAuthProfile();
-  const scope = await getPracticeScopeIdsForSession(session);
+  const today = new Date()
+  const yyyy = today.getFullYear()
+  const mm = String(today.getMonth() + 1).padStart(2, '0')
+  const dd = String(today.getDate()).padStart(2, '0')
+  const defaultStart = `${yyyy}-${mm}-01`
+  const defaultEnd = `${yyyy}-${mm}-${dd}`
 
-  const [charts, table] = await Promise.all([
-    getReportingChartsData(from, to, scope),
-    getReportingTable(from, to, scope),
-  ]);
+  const start = sp.start?.slice(0, 10) || defaultStart
+  const end = sp.end?.slice(0, 10) || defaultEnd
+  const safeStart = start <= end ? start : end
+  const safeEnd = start <= end ? end : start
+
+  const [summary, byCategory, byPractice, dailyTrend, clinicianBreakdown, recentLogs] =
+    await Promise.all([
+      getReportingSummary(safeStart, safeEnd),
+      getAppointmentsByCategory(safeStart, safeEnd),
+      getAppointmentsByPractice(safeStart, safeEnd),
+      getDailyTrend(safeStart, safeEnd),
+      getClinicianBreakdown(safeStart, safeEnd),
+      getRecentLogs(10),
+    ])
 
   return (
-    <ReportingLoader
-      initialFrom={from}
-      initialTo={to}
-      charts={charts}
-      table={table}
+    <ReportingDashboardClient
+      startDate={safeStart}
+      endDate={safeEnd}
+      summary={summary}
+      byCategory={byCategory}
+      byPractice={byPractice}
+      dailyTrend={dailyTrend}
+      clinicianBreakdown={clinicianBreakdown}
+      recentLogs={recentLogs}
     />
   );
 }
