@@ -32,7 +32,7 @@ export default async function AppLayout({
   const roleLabel = roleLabels[profile.role] ?? profile.role;
 
   return (
-    <div className="flex min-h-screen flex-row bg-[#f8fafc] dark:bg-[#0f1117]">
+    <div className="flex min-h-screen flex-row items-stretch bg-[#f8fafc] dark:bg-[#0f1117]">
       <AppSidebar
         userDisplayName={userDisplayName}
         userEmail={userEmail}
