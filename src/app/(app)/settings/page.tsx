@@ -3,7 +3,8 @@ import { getProfile } from "@/lib/supabase/auth";
 import { listActivityCategoriesForSettings } from "@/lib/supabase/activity";
 import {
   getOrganisationSettingsRecord,
-  parseDefaultHoursPerDay,
+  parseDefaultDailyHours,
+  parseDefaultWeeklyHours,
 } from "@/lib/report/org";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,8 @@ export default async function SettingsPage() {
 
   const organisationName = orgRecord?.name?.trim() || "Organisation";
   const organisationSlug = orgRecord?.slug ?? null;
-  const defaultHoursPerDay = parseDefaultHoursPerDay(orgRecord?.settings ?? null);
+  const defaultDailyHours = parseDefaultDailyHours(orgRecord?.settings ?? null);
+  const defaultWeeklyHours = parseDefaultWeeklyHours(orgRecord?.settings ?? null);
 
   const isOrgAdmin = profile.role === "admin" || profile.role === "superadmin";
 
@@ -27,7 +29,8 @@ export default async function SettingsPage() {
       profile={profile}
       organisationName={organisationName}
       organisationSlug={organisationSlug}
-      defaultHoursPerDay={defaultHoursPerDay}
+      defaultDailyHours={defaultDailyHours}
+      defaultWeeklyHours={defaultWeeklyHours}
       isOrgAdmin={isOrgAdmin}
       categories={categories}
     />

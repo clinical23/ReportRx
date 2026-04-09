@@ -1,9 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
-import { getProfile, requireRole } from "@/lib/supabase/auth";
+import { getProfile, type Profile } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
+
+async function requireOrgAdminProfile(): Promise<Profile> {
+  const profile = await getProfile();
+  if (profile.role !== "admin" && profile.role !== "superadmin") {
+    redirect("/");
+  }
+  return profile;
+}
 
 export type SettingsActionResult =
   | { success: true }
@@ -38,18 +47,27 @@ export async function updateProfile(
 export async function updateOrganisation(
   formData: FormData,
 ): Promise<SettingsActionResult> {
-  const profile = await requireRole("admin", "superadmin");
+  const profile = await requireOrgAdminProfile();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
     return { success: false, error: "Organisation name is required." };
   }
 
-  const hoursRaw = String(formData.get("default_hours_per_day") ?? "").trim();
-  const parsedHours = hoursRaw === "" ? 7.5 : parseFloat(hoursRaw);
-  if (!Number.isFinite(parsedHours) || parsedHours <= 0 || parsedHours > 24) {
+  const dailyRaw = String(formData.get("default_daily_hours") ?? "").trim();
+  const weeklyRaw = String(formData.get("default_weekly_hours") ?? "").trim();
+  const parsedDaily = dailyRaw === "" ? 7.5 : parseFloat(dailyRaw);
+  const parsedWeekly = weeklyRaw === "" ? 37.5 : parseFloat(weeklyRaw);
+
+  if (!Number.isFinite(parsedDaily) || parsedDaily <= 0 || parsedDaily > 24) {
     return {
       success: false,
-      error: "Default hours must be between 0 and 24.",
+      error: "Default daily hours must be between 0 and 24.",
+    };
+  }
+  if (!Number.isFinite(parsedWeekly) || parsedWeekly <= 0 || parsedWeekly > 80) {
+    return {
+      success: false,
+      error: "Default weekly hours must be between 0 and 80.",
     };
   }
 
@@ -72,9 +90,12 @@ export async function updateOrganisation(
       ? { ...((orgRow as { settings: Record<string, unknown> }).settings) }
       : {};
 
+  const round3 = (n: number) => Math.round(n * 1000) / 1000;
+
   const settings = {
     ...prevSettings,
-    default_hours_per_day: Math.round(parsedHours * 1000) / 1000,
+    default_daily_hours: round3(parsedDaily),
+    default_weekly_hours: round3(parsedWeekly),
   };
 
   const { error } = await supabase
@@ -95,7 +116,7 @@ export async function updateOrganisation(
 export async function createCategory(
   formData: FormData,
 ): Promise<SettingsActionResult> {
-  const profile = await requireRole("admin", "superadmin");
+  const profile = await requireOrgAdminProfile();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
     return { success: false, error: "Category name is required." };
@@ -139,7 +160,7 @@ export async function createCategory(
 export async function updateCategory(
   formData: FormData,
 ): Promise<SettingsActionResult> {
-  const profile = await requireRole("admin", "superadmin");
+  const profile = await requireOrgAdminProfile();
   const categoryId = String(formData.get("category_id") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   if (!categoryId || !name) {
@@ -170,7 +191,7 @@ export async function updateCategory(
 export async function archiveCategory(
   formData: FormData,
 ): Promise<SettingsActionResult> {
-  const profile = await requireRole("admin", "superadmin");
+  const profile = await requireOrgAdminProfile();
   const categoryId = String(formData.get("category_id") ?? "").trim();
   if (!categoryId) {
     return { success: false, error: "Missing category." };
@@ -194,10 +215,37 @@ export async function archiveCategory(
   return { success: true };
 }
 
+export async function unarchiveCategory(
+  formData: FormData,
+): Promise<SettingsActionResult> {
+  const profile = await requireOrgAdminProfile();
+  const categoryId = String(formData.get("category_id") ?? "").trim();
+  if (!categoryId) {
+    return { success: false, error: "Missing category." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("activity_categories")
+    .update({ is_active: true })
+    .eq("id", categoryId)
+    .eq("organisation_id", profile.organisation_id);
+
+  if (error) {
+    console.error("[unarchiveCategory]", error.message);
+    return { success: false, error: "Could not restore category." };
+  }
+
+  revalidatePath("/settings");
+  revalidatePath("/activity");
+  revalidatePath("/reporting");
+  return { success: true };
+}
+
 export async function reorderCategory(
   formData: FormData,
 ): Promise<SettingsActionResult> {
-  const profile = await requireRole("admin", "superadmin");
+  const profile = await requireOrgAdminProfile();
   const categoryId = String(formData.get("category_id") ?? "").trim();
   const direction = String(formData.get("direction") ?? "").trim();
   if (!categoryId || (direction !== "up" && direction !== "down")) {

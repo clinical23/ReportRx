@@ -6,12 +6,14 @@ import {
   useTransition,
   type FormEvent,
 } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 import {
   archiveCategory,
   createCategory,
   reorderCategory,
+  unarchiveCategory,
   updateCategory,
   updateOrganisation,
   updateProfile,
@@ -36,7 +38,8 @@ type Props = {
   profile: Profile;
   organisationName: string;
   organisationSlug: string | null;
-  defaultHoursPerDay: number;
+  defaultDailyHours: number;
+  defaultWeeklyHours: number;
   isOrgAdmin: boolean;
   categories: ActivityCategorySettingsRow[];
 };
@@ -62,17 +65,22 @@ export function SettingsPageClient({
   profile,
   organisationName,
   organisationSlug,
-  defaultHoursPerDay,
+  defaultDailyHours,
+  defaultWeeklyHours,
   isOrgAdmin,
   categories: initialCategories,
 }: Props) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [profileFlash, setProfileFlash] = useState<string | null>(null);
   const [orgFlash, setOrgFlash] = useState<string | null>(null);
   const [catFlash, setCatFlash] = useState<string | null>(null);
 
   const [orgName, setOrgName] = useState(organisationName);
-  const [orgHours, setOrgHours] = useState(String(defaultHoursPerDay));
+  const [orgDailyHours, setOrgDailyHours] = useState(String(defaultDailyHours));
+  const [orgWeeklyHours, setOrgWeeklyHours] = useState(
+    String(defaultWeeklyHours),
+  );
 
   const [newCatName, setNewCatName] = useState("");
   const [renameValues, setRenameValues] = useState<Record<string, string>>(
@@ -92,6 +100,12 @@ export function SettingsPageClient({
     );
   }, [initialCategories]);
 
+  useEffect(() => {
+    setOrgName(organisationName);
+    setOrgDailyHours(String(defaultDailyHours));
+    setOrgWeeklyHours(String(defaultWeeklyHours));
+  }, [organisationName, defaultDailyHours, defaultWeeklyHours]);
+
   const submitProfile = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -99,6 +113,7 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await updateProfile(fd);
       setProfileFlash(r.success ? "Profile saved." : r.error);
+      if (r.success) router.refresh();
     });
   };
 
@@ -106,11 +121,19 @@ export function SettingsPageClient({
     e.preventDefault();
     const fd = new FormData();
     fd.set("name", orgName.trim());
-    fd.set("default_hours_per_day", orgHours.trim() || String(defaultHoursPerDay));
+    fd.set(
+      "default_daily_hours",
+      orgDailyHours.trim() || String(defaultDailyHours),
+    );
+    fd.set(
+      "default_weekly_hours",
+      orgWeeklyHours.trim() || String(defaultWeeklyHours),
+    );
     setOrgFlash(null);
     startTransition(async () => {
       const r = await updateOrganisation(fd);
       setOrgFlash(r.success ? "Organisation saved." : r.error);
+      if (r.success) router.refresh();
     });
   };
 
@@ -124,6 +147,7 @@ export function SettingsPageClient({
       if (r.success) {
         setNewCatName("");
         setCatFlash("Category added.");
+        router.refresh();
       } else {
         setCatFlash(r.error);
       }
@@ -138,6 +162,7 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await updateCategory(fd);
       setCatFlash(r.success ? "Category updated." : r.error);
+      if (r.success) router.refresh();
     });
   };
 
@@ -148,6 +173,18 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await archiveCategory(fd);
       setCatFlash(r.success ? "Category archived." : r.error);
+      if (r.success) router.refresh();
+    });
+  };
+
+  const doUnarchive = (categoryId: string) => {
+    const fd = new FormData();
+    fd.set("category_id", categoryId);
+    setCatFlash(null);
+    startTransition(async () => {
+      const r = await unarchiveCategory(fd);
+      setCatFlash(r.success ? "Category restored." : r.error);
+      if (r.success) router.refresh();
     });
   };
 
@@ -160,6 +197,8 @@ export function SettingsPageClient({
       const r = await reorderCategory(fd);
       if (!r.success) {
         setCatFlash(r.error);
+      } else {
+        router.refresh();
       }
     });
   };
@@ -275,24 +314,42 @@ export function SettingsPageClient({
                     {organisationSlug || "—"}
                   </div>
                 </div>
-                <div className="grid gap-2">
-                  <label className="text-xs font-medium text-gray-600" htmlFor="def_hours">
-                    Default hours per day
-                  </label>
-                  <input
-                    id="def_hours"
-                    type="number"
-                    min={0.25}
-                    max={24}
-                    step={0.25}
-                    value={orgHours}
-                    onChange={(e) => setOrgHours(e.target.value)}
-                    className={inputCls}
-                  />
-                  <p className="text-xs text-gray-500">
-                    Prefills the hours field on the activity log form (default 7.5).
-                  </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <label className="text-xs font-medium text-gray-600" htmlFor="def_daily">
+                      Default daily hours
+                    </label>
+                    <input
+                      id="def_daily"
+                      type="number"
+                      min={0.25}
+                      max={24}
+                      step={0.25}
+                      value={orgDailyHours}
+                      onChange={(e) => setOrgDailyHours(e.target.value)}
+                      className={inputCls}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <label className="text-xs font-medium text-gray-600" htmlFor="def_weekly">
+                      Default weekly hours
+                    </label>
+                    <input
+                      id="def_weekly"
+                      type="number"
+                      min={1}
+                      max={80}
+                      step={0.25}
+                      value={orgWeeklyHours}
+                      onChange={(e) => setOrgWeeklyHours(e.target.value)}
+                      className={inputCls}
+                    />
+                  </div>
                 </div>
+                <p className="text-xs text-gray-500">
+                  Stored for your organisation (defaults 7.5 and 37.5). Daily value prefills
+                  the activity log hours field.
+                </p>
                 {orgFlash ? (
                   <p
                     className={`text-sm ${orgFlash.includes("Could") || orgFlash.includes("required") || orgFlash.includes("must") ? "text-red-600" : "text-emerald-700"}`}
@@ -436,7 +493,17 @@ export function SettingsPageClient({
                             >
                               Archive
                             </Button>
-                          ) : null}
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={pending}
+                              onClick={() => doUnarchive(c.id)}
+                            >
+                              Restore
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </li>

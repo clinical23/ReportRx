@@ -53,25 +53,48 @@ export async function getOrganisationSettingsRecord(
   };
 }
 
-/** Default working hours for activity log forms (from organisations.settings). */
-export function parseDefaultHoursPerDay(settings: unknown): number {
-  if (
-    settings &&
-    typeof settings === "object" &&
-    settings !== null &&
-    "default_hours_per_day" in settings
-  ) {
-    const v = (settings as { default_hours_per_day: unknown })
-      .default_hours_per_day;
-    if (typeof v === "number" && Number.isFinite(v) && v > 0 && v <= 24) {
+function parseHoursField(
+  settings: Record<string, unknown> | null,
+  keys: string[],
+  max: number,
+  fallback: number,
+): number {
+  if (!settings) return fallback;
+  for (const key of keys) {
+    if (!(key in settings)) continue;
+    const v = settings[key];
+    if (typeof v === "number" && Number.isFinite(v) && v > 0 && v <= max) {
       return v;
     }
     if (typeof v === "string") {
       const n = parseFloat(v);
-      if (Number.isFinite(n) && n > 0 && n <= 24) {
+      if (Number.isFinite(n) && n > 0 && n <= max) {
         return n;
       }
     }
   }
-  return 7.5;
+  return fallback;
+}
+
+/** Default hours in a working day for activity log forms (organisations.settings). */
+export function parseDefaultDailyHours(settings: unknown): number {
+  if (!settings || typeof settings !== "object" || settings === null) {
+    return 7.5;
+  }
+  const o = settings as Record<string, unknown>;
+  return parseHoursField(o, ["default_daily_hours", "default_hours_per_day"], 24, 7.5);
+}
+
+/** Default hours in a working week (organisations.settings). */
+export function parseDefaultWeeklyHours(settings: unknown): number {
+  if (!settings || typeof settings !== "object" || settings === null) {
+    return 37.5;
+  }
+  const o = settings as Record<string, unknown>;
+  return parseHoursField(o, ["default_weekly_hours"], 80, 37.5);
+}
+
+/** @deprecated Use parseDefaultDailyHours — kept for call sites that still use the old name. */
+export function parseDefaultHoursPerDay(settings: unknown): number {
+  return parseDefaultDailyHours(settings);
 }

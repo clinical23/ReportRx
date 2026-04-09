@@ -1,157 +1,211 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { requireRole } from '@/lib/supabase/auth'
 import { revalidatePath } from 'next/cache'
-import { randomUUID } from 'crypto'
+import { redirect } from 'next/navigation'
+
+import { createAnonAuthClient } from '@/lib/supabase/anon-server'
+import { requireRole } from '@/lib/supabase/auth'
+import { createClient } from '@/lib/supabase/server'
+
+function redirectAdminError(message: string): never {
+  redirect(`/admin?error=${encodeURIComponent(message)}`)
+}
+
+function appOrigin(): string {
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+    'http://localhost:3000'
+  return base.replace(/\/$/, '')
+}
 
 // Create a new organisation (superadmin only)
-export async function createOrganisation(formData: FormData) {
+export async function createOrganisation(formData: FormData): Promise<void> {
   await requireRole('superadmin')
   const supabase = await createClient()
 
   const name = (formData.get('name') as string)?.trim()
-  if (!name) return { success: false, error: 'Name is required' }
+  if (!name) redirectAdminError('Name is required')
 
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
-  const { data: org, error } = await supabase
-    .from('organisations')
-    .insert({ name, slug })
-    .select('id, name, slug')
-    .single()
+  const { error } = await supabase.from('organisations').insert({ name, slug }).select('id').single()
 
   if (error) {
-    if (error.code === '23505') return { success: false, error: 'An organisation with that name already exists' }
-    return { success: false, error: error.message }
+    if (error.code === '23505')
+      redirectAdminError('An organisation with that name already exists')
+    redirectAdminError(error.message)
   }
 
   revalidatePath('/admin')
-  return { success: true, organisation: org }
 }
 
 // Create a PCN within an org (superadmin or admin)
-export async function createPCN(formData: FormData) {
+export async function createPCN(formData: FormData): Promise<void> {
   const profile = await requireRole('superadmin', 'admin')
   const supabase = await createClient()
 
   const name = (formData.get('name') as string)?.trim()
-  const organisationId = formData.get('organisation_id') as string
+  const organisationId = (formData.get('organisation_id') as string)?.trim()
 
-  // Superadmins can specify any org, admins use their own
-  const orgId = profile.role === 'superadmin' ? organisationId : profile.organisation_id
+  const orgId =
+    profile.role === 'superadmin' ? organisationId || profile.organisation_id : profile.organisation_id
 
-  if (!name || !orgId) return { success: false, error: 'Name and organisation are required' }
+  if (!name || !orgId) redirectAdminError('Name and organisation are required')
 
-  const { error } = await supabase
-    .from('pcns')
-    .insert({ name, organisation_id: orgId })
+  const { error } = await supabase.from('pcns').insert({ name, organisation_id: orgId })
 
-  if (error) return { success: false, error: error.message }
+  if (error) redirectAdminError(error.message)
 
   revalidatePath('/admin')
-  return { success: true }
 }
 
 // Create a practice within a PCN (superadmin or admin)
-export async function createPractice(formData: FormData) {
+export async function createPractice(formData: FormData): Promise<void> {
   const profile = await requireRole('superadmin', 'admin')
   const supabase = await createClient()
 
   const name = (formData.get('name') as string)?.trim()
-  const pcnId = formData.get('pcn_id') as string
-  const organisationId = formData.get('organisation_id') as string
+  const pcnId = (formData.get('pcn_id') as string)?.trim()
+  const organisationId = (formData.get('organisation_id') as string)?.trim()
 
-  const orgId = profile.role === 'superadmin' ? organisationId : profile.organisation_id
+  const orgId =
+    profile.role === 'superadmin' ? organisationId || profile.organisation_id : profile.organisation_id
 
-  if (!name || !orgId) return { success: false, error: 'Name and organisation are required' }
+  if (!name || !orgId) redirectAdminError('Name and organisation are required')
 
   const { error } = await supabase
     .from('practices')
     .insert({ name, pcn_id: pcnId || null, organisation_id: orgId })
 
-  if (error) return { success: false, error: error.message }
+  if (error) redirectAdminError(error.message)
 
   revalidatePath('/admin')
-  return { success: true }
 }
 
-// Invite a user to an organisation (superadmin or admin)
-// This pre-creates a profile row so when they sign up, they're already in the org
-export async function inviteUser(formData: FormData) {
+export type InviteUserResult =
+  | { success: true; message: string }
+  | { success: false; error: string }
+
+// Record a pending invite and optionally send a magic link (anon key only — no service role).
+export async function inviteUser(formData: FormData): Promise<InviteUserResult> {
   const profile = await requireRole('superadmin', 'admin')
   const supabase = await createClient()
 
   const email = (formData.get('email') as string)?.trim().toLowerCase()
-  const role = (formData.get('role') as string) || 'clinician'
-  const fullName = (formData.get('full_name') as string)?.trim() || ''
-  const organisationId = formData.get('organisation_id') as string
+  const role = (formData.get('role') as string)?.trim()
+  const fullName = (formData.get('full_name') as string)?.trim()
+  const organisationId = (formData.get('organisation_id') as string)?.trim()
 
-  const orgId = profile.role === 'superadmin' ? organisationId : profile.organisation_id
+  const orgId =
+    profile.role === 'superadmin' ? organisationId || profile.organisation_id : profile.organisation_id
 
-  if (!email || !orgId) return { success: false, error: 'Email and organisation are required' }
+  if (!email || !orgId) {
+    return { success: false, error: 'Email and organisation are required' }
+  }
 
-  // Validate role — admins can't create superadmins
-  const allowedRoles = profile.role === 'superadmin'
-    ? ['clinician', 'manager', 'admin', 'superadmin']
-    : ['clinician', 'manager']
+  if (!fullName) {
+    return { success: false, error: 'Full name is required' }
+  }
+
+  if (!role) {
+    return { success: false, error: 'Please select a role' }
+  }
+
+  const allowedRoles =
+    profile.role === 'superadmin'
+      ? ['clinician', 'manager', 'admin', 'superadmin']
+      : ['clinician', 'manager']
 
   if (!allowedRoles.includes(role)) {
     return { success: false, error: 'You cannot assign that role' }
   }
 
-  // Check if email already exists
-  const { data: existing } = await supabase
+  const { data: existingProfile } = await supabase
     .from('profiles')
     .select('id')
     .eq('email', email)
-    .single()
+    .maybeSingle()
 
-  if (existing) return { success: false, error: 'A user with that email already exists' }
+  if (existingProfile) {
+    return { success: false, error: 'A user with that email already exists' }
+  }
 
-  // Pre-create the profile with a placeholder ID
-  // When they sign up via magic link, the trigger will update the ID to their real auth ID
-  const { error } = await supabase
-    .from('profiles')
-    .insert({
-      id: randomUUID(),
-      email,
-      full_name: fullName,
-      role,
-      organisation_id: orgId,
-      invited_by: profile.id,
-      invited_at: new Date().toISOString(),
-    })
+  await supabase.from('organisation_invites').delete().eq('email', email)
 
-  if (error) return { success: false, error: error.message }
+  const { error: inviteRowError } = await supabase.from('organisation_invites').insert({
+    email,
+    organisation_id: orgId,
+    role,
+    full_name: fullName,
+    invited_by: profile.id,
+  })
 
-  // Send the magic link invite email via Supabase Auth
-  const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email)
-
-  if (inviteError) {
-    // Profile was created but invite failed — that's ok, they can still use magic link on login page
-    console.error('Invite email failed:', inviteError.message)
-    return {
-      success: true,
-      warning: 'User was added but the invite email could not be sent. They can sign in manually at the login page.',
+  if (inviteRowError) {
+    console.error('[inviteUser] organisation_invites', inviteRowError.message)
+    if (inviteRowError.code === '42P01') {
+      return {
+        success: false,
+        error:
+          'Invites table is not installed. Apply migration 20260410300000_organisation_invites.sql in Supabase.',
+      }
     }
+    return { success: false, error: inviteRowError.message }
+  }
+
+  const origin = appOrigin()
+  const redirectTo = `${origin}/auth/callback?next=/onboarding`
+
+  try {
+    const anon = createAnonAuthClient()
+    const { error: otpError } = await anon.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectTo },
+    })
+    if (otpError) {
+      console.warn('[inviteUser] signInWithOtp:', otpError.message)
+    }
+  } catch (e) {
+    console.warn('[inviteUser] OTP client error', e)
   }
 
   revalidatePath('/admin')
-  return { success: true }
+
+  const loginUrl = `${origin}/login`
+  return {
+    success: true,
+    message: `User profile created. Send them this login link: ${loginUrl} — they can sign in with their email and will be connected to your organisation once they complete magic link sign-in.`,
+  }
+}
+
+export type InviteFormState = {
+  ok: boolean
+  message: string
+  error: string
+}
+
+export async function inviteUserFormAction(
+  _prev: InviteFormState,
+  formData: FormData,
+): Promise<InviteFormState> {
+  const result = await inviteUser(formData)
+  if (result.success) {
+    return { ok: true, message: result.message, error: '' }
+  }
+  return { ok: false, message: '', error: result.error }
 }
 
 // Transfer admin — promote a user to admin or superadmin (superadmin only)
-export async function changeUserRole(formData: FormData) {
+export async function changeUserRole(formData: FormData): Promise<void> {
   await requireRole('superadmin')
   const supabase = await createClient()
 
   const userId = formData.get('user_id') as string
   const newRole = formData.get('role') as string
 
-  if (!userId || !newRole) return { success: false, error: 'User and role are required' }
+  if (!userId || !newRole) redirectAdminError('User and role are required')
   if (!['clinician', 'manager', 'admin', 'superadmin'].includes(newRole)) {
-    return { success: false, error: 'Invalid role' }
+    redirectAdminError('Invalid role')
   }
 
   const { error } = await supabase
@@ -159,8 +213,7 @@ export async function changeUserRole(formData: FormData) {
     .update({ role: newRole, updated_at: new Date().toISOString() })
     .eq('id', userId)
 
-  if (error) return { success: false, error: error.message }
+  if (error) redirectAdminError(error.message)
 
   revalidatePath('/admin')
-  return { success: true }
 }

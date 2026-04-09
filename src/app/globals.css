@@ -75,3 +75,9 @@
     @apply bg-[#f8fafc];
   }
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

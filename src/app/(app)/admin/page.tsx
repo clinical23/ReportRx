@@ -3,8 +3,8 @@ import {
   createOrganisation,
   createPCN,
   createPractice,
-  inviteUser,
 } from '@/app/actions/admin'
+import { AdminInviteForm } from '@/components/admin/admin-invite-form'
 import { requireRole } from '@/lib/supabase/auth'
 import {
   listOrganisations,
@@ -22,45 +22,32 @@ const roleBadgeClasses: Record<string, string> = {
   superadmin: 'bg-purple-50 text-purple-700 border border-purple-200',
 }
 
-export default async function AdminPage() {
-  try {
-    const profile = await requireRole('superadmin', 'admin')
-    const organisations = await listOrganisations(profile)
-    const currentOrgId = profile.organisation_id
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const { error: actionError } = await searchParams
+  const profile = await requireRole('superadmin', 'admin')
+  const organisations = await listOrganisations(profile)
+  const currentOrgId = profile.organisation_id
 
-    const [pcns, practices, teamMembers] = await Promise.all([
-      listPCNs(currentOrgId),
-      listPractices(currentOrgId),
-      listTeamMembers(currentOrgId),
-    ])
+  const [pcns, practices, teamMembers] = await Promise.all([
+    listPCNs(currentOrgId),
+    listPractices(currentOrgId),
+    listTeamMembers(currentOrgId),
+  ])
 
-    async function createOrganisationAction(formData: FormData) {
-      'use server'
-      await createOrganisation(formData)
-    }
-
-    async function createPCNAction(formData: FormData) {
-      'use server'
-      await createPCN(formData)
-    }
-
-    async function createPracticeAction(formData: FormData) {
-      'use server'
-      await createPractice(formData)
-    }
-
-    async function inviteUserAction(formData: FormData) {
-      'use server'
-      await inviteUser(formData)
-    }
-
-    async function changeUserRoleAction(formData: FormData) {
-      'use server'
-      await changeUserRole(formData)
-    }
-
-    return (
-      <div className="mx-auto w-full max-w-7xl space-y-6">
+  return (
+    <div className="mx-auto w-full max-w-7xl space-y-6">
+      {actionError ? (
+        <div
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+          role="alert"
+        >
+          {actionError}
+        </div>
+      ) : null}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h1 className="text-2xl font-semibold text-gray-900">Admin</h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -93,7 +80,10 @@ export default async function AdminPage() {
             </table>
           </div>
 
-          <form action={createOrganisationAction} className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto]">
+          <form
+            action={createOrganisation}
+            className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto]"
+          >
             <input
               type="text"
               name="name"
@@ -131,7 +121,10 @@ export default async function AdminPage() {
           </table>
         </div>
 
-        <form action={createPCNAction} className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto]">
+        <form
+          action={createPCN}
+          className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto]"
+        >
           <input type="hidden" name="organisation_id" value={currentOrgId} />
           <input
             type="text"
@@ -171,7 +164,10 @@ export default async function AdminPage() {
           </table>
         </div>
 
-        <form action={createPracticeAction} className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
+        <form
+          action={createPractice}
+          className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]"
+        >
           <input type="hidden" name="organisation_id" value={currentOrgId} />
           <input
             type="text"
@@ -241,7 +237,7 @@ export default async function AdminPage() {
                     </span>
                   </td>
                   <td className="px-4 py-2.5">
-                    <form action={changeUserRoleAction} className="flex flex-col gap-2 md:flex-row md:items-center">
+                    <form action={changeUserRole} className="flex flex-col gap-2 md:flex-row md:items-center">
                       <input type="hidden" name="user_id" value={member.id} />
                       <select
                         name="role"
@@ -277,47 +273,11 @@ export default async function AdminPage() {
 
       <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Invite User</h2>
-        <form action={inviteUserAction} className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <input type="hidden" name="organisation_id" value={currentOrgId} />
-          <input
-            type="email"
-            name="email"
-            required
-            placeholder="Email address"
-            inputMode="email"
-            autoComplete="email"
-            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
-          />
-          <input
-            type="text"
-            name="full_name"
-            placeholder="Full name (optional)"
-            autoComplete="name"
-            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
-          />
-          <select
-            name="role"
-            defaultValue="clinician"
-            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
-          >
-            <option value="clinician">Clinician</option>
-            <option value="manager">Manager</option>
-            <option value="admin">Admin</option>
-          </select>
-          <div className="md:col-span-2">
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-teal-600 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-teal-700 md:w-auto md:py-2.5 md:text-sm"
-            >
-              Send invite
-            </button>
-          </div>
-        </form>
+        <AdminInviteForm
+          organisationId={currentOrgId}
+          isSuperadmin={profile.role === 'superadmin'}
+        />
       </section>
-      </div>
-    )
-  } catch (error) {
-    console.error('ADMIN PAGE ERROR:', error)
-    throw error
-  }
+    </div>
+  )
 }

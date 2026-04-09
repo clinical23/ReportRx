@@ -31,6 +31,13 @@ export type AdminTeamMember = {
 
 export async function listOrganisations(profile: Profile): Promise<AdminOrganisation[]> {
   const supabase = await createClient()
+  if (profile.role === 'superadmin') {
+    const { data } = await supabase
+      .from('organisations')
+      .select('id, name, slug')
+      .order('name', { ascending: true })
+    return (data ?? []) as AdminOrganisation[]
+  }
   const { data } = await supabase
     .from('organisations')
     .select('id, name, slug')
