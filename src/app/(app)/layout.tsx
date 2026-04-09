@@ -1,4 +1,4 @@
-import { AppSidebar } from "@/components/layout/app-sidebar";
+import AppSidebar from "@/components/layout/app-sidebar";
 import { TopNavbar } from "@/components/layout/top-navbar";
 import UserNav from "@/components/UserNav";
 import { signOutAction } from "@/app/actions/auth";
@@ -23,31 +23,26 @@ export default async function AppLayout({
       .join("")
       .toUpperCase()
       .slice(0, 2) ?? "U";
-  const roleLabels: Record<string, string> = {
-    clinician: "Clinician",
-    manager: "Manager",
-    admin: "Admin",
-    superadmin: "Super Admin",
-  };
-  const roleLabel = roleLabels[profile.role] ?? profile.role;
 
   return (
-    <div className="flex min-h-screen flex-row items-stretch bg-[#f8fafc] dark:bg-[#0f1117]">
+    <div className="flex min-h-screen bg-[#F7F8FA]">
       <AppSidebar
-        userDisplayName={userDisplayName}
-        userEmail={userEmail}
-        initials={initials}
-        roleLabel={roleLabel}
         canAccessAdmin={profile.role === "admin" || profile.role === "superadmin"}
+        profile={{
+          full_name: profile.full_name ?? "User",
+          email: profile.email ?? "",
+          role: profile.role,
+        }}
+        signOutAction={signOutAction}
       />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <main className="min-w-0 flex-1 overflow-auto">
         <TopNavbar
           practiceName={practiceName}
           userDisplayName={userDisplayName}
           userEmail={userEmail}
           initials={initials}
         />
-        <div className="flex justify-end border-b border-slate-200 bg-white px-4 py-2 sm:px-6">
+        <div className="flex justify-end border-b border-gray-200 bg-white px-4 py-2 sm:px-6">
           <UserNav
             fullName={profile.full_name}
             email={profile.email}
@@ -56,10 +51,8 @@ export default async function AppLayout({
             signOutAction={signOutAction}
           />
         </div>
-        <main className="app-content-bg flex-1 overflow-auto p-4 sm:p-6 dark:bg-[#0f1117]">
-          {children}
-        </main>
-      </div>
+        <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
+      </main>
     </div>
   );
 }

@@ -373,6 +373,7 @@ export default function ActivityLogForm({
             </Button>
             <Button
               type="button"
+              className="bg-teal-600 text-white hover:bg-teal-700"
               onClick={handleSingle}
               disabled={isPending || !canSaveSingle}
             >
@@ -494,6 +495,7 @@ export default function ActivityLogForm({
             </p>
             <Button
               type="button"
+              className="bg-teal-600 text-white hover:bg-teal-700"
               onClick={handleBulk}
               disabled={isPending || bulkClinicianIds.length === 0}
             >

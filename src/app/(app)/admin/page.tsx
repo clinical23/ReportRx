@@ -61,7 +61,7 @@ export default async function AdminPage() {
 
     return (
       <div className="mx-auto w-full max-w-7xl space-y-6">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-semibold text-gray-900">Admin</h1>
         <p className="mt-1 text-sm text-gray-500">
           Manage organisations, teams, and invitations for ReportRx.
@@ -69,7 +69,7 @@ export default async function AdminPage() {
       </div>
 
       {profile.role === 'superadmin' ? (
-        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Organisations</h2>
           </div>
@@ -111,7 +111,7 @@ export default async function AdminPage() {
         </section>
       ) : null}
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">PCNs</h2>
 
         <div className="mb-6 overflow-hidden rounded-xl border border-gray-200">
@@ -149,7 +149,7 @@ export default async function AdminPage() {
         </form>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Practices</h2>
 
         <div className="mb-6 overflow-hidden rounded-xl border border-gray-200">
@@ -201,7 +201,7 @@ export default async function AdminPage() {
         </form>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Team Members</h2>
 
         <div className="overflow-hidden rounded-xl border border-gray-200">
@@ -275,7 +275,7 @@ export default async function AdminPage() {
         ) : null}
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Invite User</h2>
         <form action={inviteUserAction} className="grid gap-3 sm:grid-cols-2">
           <input type="hidden" name="organisation_id" value={currentOrgId} />

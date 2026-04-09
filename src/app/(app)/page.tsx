@@ -19,7 +19,6 @@ import {
 import {
   formatDateMediumUK,
   formatRelativeDayLabelUK,
-  todayISOInLondon,
 } from "@/lib/datetime";
 import { getDashboardSnapshot } from "@/lib/supabase/activity";
 import { getAuthProfile } from "@/lib/supabase/auth-profile";
@@ -63,21 +62,21 @@ function StatTile({
   const content = (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm",
+        "relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm",
         "border-l-4 pl-5",
         borders[accent],
         href &&
-          "transition-all duration-150 hover:shadow-md hover:border-slate-300 hover:-translate-y-0.5 cursor-pointer",
+          "cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md",
       )}
     >
       <div className="absolute right-4 top-4 opacity-80">
         <Icon className={cn("size-5", iconTones[accent])} aria-hidden />
       </div>
-      <p className="pr-10 text-sm font-medium text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-slate-800">
+      <p className="pr-10 text-sm font-medium text-gray-500">{label}</p>
+      <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-gray-900">
         {value}
       </p>
-      <p className="mt-3 text-sm font-normal text-slate-600">{hint}</p>
+      <p className="mt-3 text-sm text-gray-600">{hint}</p>
       {href && (
         <span className="mt-2 inline-block text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
           View details →
@@ -113,7 +112,7 @@ export default async function DashboardPage() {
       hint: "From activity logs (UK calendar month)",
       icon: Calendar,
       accent: "teal" as const,
-      href: "/activity",
+      href: "/reporting",
     },
     {
       label: "Hours logged this month",
@@ -126,7 +125,7 @@ export default async function DashboardPage() {
       hint: "Unique activity logs in the UK calendar month",
       icon: Clock,
       accent: "blue" as const,
-      href: "/activity",
+      href: "/reporting",
     },
     {
       label: "Active clinicians this month",
@@ -134,7 +133,7 @@ export default async function DashboardPage() {
       hint: "Clinicians with at least one log entry this month",
       icon: Users,
       accent: "violet" as const,
-      href: "/clinicians",
+      href: "/reporting",
     },
   ];
 
@@ -173,19 +172,20 @@ export default async function DashboardPage() {
       hint: "Distinct activity log submissions",
       icon: FileStack,
       accent: "emerald" as const,
-      href: `/activity/day?date=${todayISOInLondon()}`,
+      href: "/reporting",
     },
   ];
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-teal-50 via-white to-slate-50/80 p-6 shadow-sm sm:p-8">
+      <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-teal-50 via-white to-gray-50/80 p-6 shadow-sm sm:p-8">
         <div className="max-w-2xl">
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-800 sm:text-3xl">
-            Welcome back, {firstName}
+          <h1 className="text-2xl font-semibold text-gray-900 sm:text-3xl">
+            Dashboard
           </h1>
-          <p className="mt-2 text-sm font-normal text-slate-600">
-            Here is an overview of your practice at a glance.
+          <p className="mt-2 text-sm text-gray-500">
+            Welcome back, {firstName}. Here is an overview of your practice at a
+            glance.
           </p>
         </div>
       </div>
@@ -224,24 +224,24 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           {snap.recentEntries.length === 0 ? (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-gray-600">
               No activity logged yet this month.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
               <table className="w-full min-w-[36rem] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-100 text-left">
-                    <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <tr className="border-b border-gray-100 bg-gray-50 text-left">
+                    <th className="px-4 py-3 text-sm font-medium text-gray-500">
                       Clinician
                     </th>
-                    <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <th className="px-4 py-3 text-sm font-medium text-gray-500">
                       Practice
                     </th>
-                    <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <th className="px-4 py-3 text-sm font-medium text-gray-500">
                       When
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">
                       Appointments
                     </th>
                   </tr>
@@ -251,8 +251,8 @@ export default async function DashboardPage() {
                     <tr
                       key={e.log_id}
                       className={cn(
-                        "border-b border-slate-100 last:border-0 transition-colors hover:bg-teal-50/40 cursor-pointer",
-                        i % 2 === 0 ? "bg-white" : "bg-slate-50/80",
+                        "cursor-pointer border-b border-gray-100 transition-colors last:border-0 hover:bg-gray-50",
+                        i % 2 === 0 ? "bg-white" : "bg-gray-50/50",
                       )}
                     >
                       <td className="px-4 py-3 font-medium text-slate-800">

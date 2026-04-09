@@ -108,10 +108,10 @@ export default async function DailyBreakdownPage({ searchParams }: Props) {
           <ArrowLeft className="size-3.5" aria-hidden />
           Back to dashboard
         </Link>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-800">
+        <h1 className="mt-3 text-2xl font-semibold text-gray-900">
           Daily breakdown
         </h1>
-        <p className="mt-1 text-sm text-slate-500">{dateLabel}</p>
+        <p className="mt-1 text-sm text-gray-500">{dateLabel}</p>
       </div>
 
       {/* Stat pills */}

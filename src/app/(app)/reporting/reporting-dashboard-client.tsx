@@ -73,7 +73,7 @@ function DateFilter({ startDate, endDate }: { startDate: string; endDate: string
   }
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="flex flex-wrap gap-2">
         {presets.map((preset) => (
           <button
@@ -145,37 +145,51 @@ export function ReportingDashboardClient({
   )
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Reporting Dashboard</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">Reporting</h1>
         <p className="text-sm text-gray-500">
           {startDate} to {endDate}
         </p>
       </div>
 
-      <DateFilter startDate={startDate} endDate={endDate} />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 flex-1">
+          <DateFilter startDate={startDate} endDate={endDate} />
+        </div>
+        <a
+          href={`/api/export?start=${encodeURIComponent(startDate)}&end=${encodeURIComponent(endDate)}`}
+          download
+          className="inline-flex shrink-0 items-center gap-2 self-start rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700 lg:self-center"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Export CSV
+        </a>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <p className="text-sm text-gray-500">Total appointments</p>
           <p className="mt-1 text-3xl font-bold text-teal-600">{summary.totalAppointments.toLocaleString()}</p>
         </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <p className="text-sm text-gray-500">Hours logged</p>
           <p className="mt-1 text-3xl font-bold text-teal-600">{summary.totalHours.toLocaleString()}</p>
         </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <p className="text-sm text-gray-500">Active clinicians</p>
           <p className="mt-1 text-3xl font-bold text-teal-600">{summary.activeClinicians.toLocaleString()}</p>
         </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <p className="text-sm text-gray-500">Avg per day</p>
           <p className="mt-1 text-3xl font-bold text-teal-600">{summary.avgAppointmentsPerDay.toLocaleString()}</p>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="mb-3 text-sm font-semibold text-gray-900">Appointments by category</h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -189,7 +203,7 @@ export function ReportingDashboardClient({
             </ResponsiveContainer>
           </div>
         </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="mb-3 text-sm font-semibold text-gray-900">Appointments by practice</h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -209,7 +223,7 @@ export function ReportingDashboardClient({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold text-gray-900">Daily trend</h2>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
@@ -231,12 +245,12 @@ export function ReportingDashboardClient({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold text-gray-900">Clinician breakdown</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-gray-600">
-              <tr>
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50 text-left text-sm font-medium text-gray-500">
                 <th className="px-3 py-2">Clinician</th>
                 <th className="px-3 py-2">Appointments</th>
                 <th className="px-3 py-2">Hours</th>
@@ -246,7 +260,10 @@ export function ReportingDashboardClient({
             </thead>
             <tbody>
               {clinicianBreakdown.map((row, idx) => (
-                <tr key={`${row.clinician_name}-${idx}`} className={idx % 2 ? 'bg-gray-50/60' : 'bg-white'}>
+                <tr
+                  key={`${row.clinician_name}-${idx}`}
+                  className="border-b border-gray-100 hover:bg-gray-50"
+                >
                   <td className="px-3 py-2">{row.clinician_name}</td>
                   <td className="px-3 py-2">{row.total_appointments}</td>
                   <td className="px-3 py-2">{row.total_hours}</td>
@@ -259,7 +276,7 @@ export function ReportingDashboardClient({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold text-gray-900">Recent activity</h2>
         <div className="space-y-2">
           {recentLogs.map((log, idx) => (

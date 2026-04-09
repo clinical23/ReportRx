@@ -35,10 +35,10 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-800 dark:text-slate-100">
+        <h1 className="text-2xl font-semibold text-gray-900">
           Settings
         </h1>
-        <p className="mt-1 text-sm font-normal text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-sm text-gray-500">
           Practice preferences and workspace configuration.
         </p>
       </div>
@@ -53,18 +53,18 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-2">
-            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            <label className="text-xs font-medium text-gray-600">
               Practice name
             </label>
-            <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            <div className="rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2.5 text-sm text-gray-900">
               {practiceName}
             </div>
           </div>
           <div className="grid gap-2">
-            <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            <label className="text-xs font-medium text-gray-600">
               Timezone
             </label>
-            <div className="rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            <div className="rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2.5 text-sm text-gray-900">
               Europe/London (UK)
             </div>
           </div>

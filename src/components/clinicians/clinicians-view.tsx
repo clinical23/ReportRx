@@ -124,17 +124,17 @@ export function CliniciansView({
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
+          <h1 className="text-2xl font-semibold text-gray-900">
             Clinicians
           </h1>
-          <p className="mt-1 text-sm font-normal text-slate-600">
+          <p className="mt-1 text-sm text-gray-500">
             Directory of providers and their linked practices.
           </p>
         </div>
         {canAdd ? (
           <Button
             type="button"
-            className="shrink-0 self-start sm:self-auto"
+            className="shrink-0 self-start bg-teal-600 text-white hover:bg-teal-700 sm:self-auto"
             onClick={() => setAddOpen(true)}
           >
             Add clinician
@@ -142,7 +142,7 @@ export function CliniciansView({
         ) : null}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         {clinicians.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-slate-600">
             No clinicians yet.
@@ -161,31 +161,31 @@ export function CliniciansView({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[56rem] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-100 text-left">
-                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-gray-100 bg-gray-50 text-left">
+                  <th className="px-4 py-3 text-sm font-medium text-gray-500">
                     Name
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-3 text-sm font-medium text-gray-500">
                     Type
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-3 text-sm font-medium text-gray-500">
                     Practices
                   </th>
-                  <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-4 py-3 text-sm font-medium text-gray-500">
                     PCN
                   </th>
-                  <th className="hidden px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500 md:table-cell">
+                  <th className="hidden px-4 py-3 text-sm font-medium text-gray-500 md:table-cell">
                     Total hours (this month)
                   </th>
                   {(canEdit || canDelete) && (
-                    <th className="px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <th className="px-4 py-3 text-sm font-medium text-gray-500">
                       <span className="sr-only">Actions</span>
                     </th>
                   )}
                 </tr>
               </thead>
               <tbody>
-                {clinicians.map((c, i) => {
+                {clinicians.map((c) => {
                   const typeLabel = typeNameForClinician(
                     c.clinician_type_id,
                     clinicianTypes,
@@ -193,11 +193,7 @@ export function CliniciansView({
                   return (
                     <tr
                       key={c.id}
-                      className={
-                        i % 2 === 0
-                          ? "border-b border-slate-100 bg-white hover:bg-slate-50/90"
-                          : "border-b border-slate-100 bg-slate-50/70 hover:bg-slate-50"
-                      }
+                      className="border-b border-gray-100 hover:bg-gray-50"
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
