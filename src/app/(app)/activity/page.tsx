@@ -48,7 +48,7 @@ export default async function ActivityPage() {
     const variant = isClinician && !isManager ? 'clinician' : 'manager'
 
     return (
-      <div className="mx-auto max-w-4xl space-y-8">
+      <div className="mx-auto min-w-0 max-w-4xl space-y-8 overflow-x-hidden pb-24 md:pb-0">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
             Activity
