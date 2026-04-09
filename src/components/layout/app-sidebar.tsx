@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Activity,
-  BarChart3,
-  LayoutDashboard,
-  Settings,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
+import { appNavAdminItem, appNavItems } from "@/components/layout/app-nav-items";
 
 type Props = {
   canAccessAdmin: boolean;
@@ -21,20 +14,6 @@ type Props = {
   signOutAction: () => Promise<void>;
 };
 
-const navItems = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Activity", href: "/activity", icon: Activity },
-  { label: "Reporting", href: "/reporting", icon: BarChart3 },
-  { label: "Clinicians", href: "/clinicians", icon: Users },
-  { label: "Settings", href: "/settings", icon: Settings },
-];
-
-const adminItem = {
-  label: "Admin",
-  href: "/admin",
-  icon: ShieldCheck,
-};
-
 export default function AppSidebar({
   canAccessAdmin,
   profile,
@@ -42,7 +21,7 @@ export default function AppSidebar({
 }: Props) {
   const pathname = usePathname();
 
-  const allItems = canAccessAdmin ? [...navItems, adminItem] : navItems;
+  const allItems = canAccessAdmin ? [...appNavItems, appNavAdminItem] : appNavItems;
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
