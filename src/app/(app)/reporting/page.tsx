@@ -4,6 +4,7 @@ import {
   getAppointmentsByPractice,
   getClinicianBreakdown,
   getDailyTrend,
+  getDataCompleteness,
   getRecentLogs,
   getReportingSummary,
 } from '@/lib/supabase/reporting'
@@ -31,15 +32,23 @@ export default async function ReportingPage({
   const safeStart = start <= end ? start : end
   const safeEnd = start <= end ? end : start
 
-  const [summary, byCategory, byPractice, dailyTrend, clinicianBreakdown, recentLogs] =
-    await Promise.all([
-      getReportingSummary(safeStart, safeEnd),
-      getAppointmentsByCategory(safeStart, safeEnd),
-      getAppointmentsByPractice(safeStart, safeEnd),
-      getDailyTrend(safeStart, safeEnd),
-      getClinicianBreakdown(safeStart, safeEnd),
-      getRecentLogs(10),
-    ])
+  const [
+    summary,
+    byCategory,
+    byPractice,
+    dailyTrend,
+    clinicianBreakdown,
+    recentLogs,
+    dataCompleteness,
+  ] = await Promise.all([
+    getReportingSummary(safeStart, safeEnd),
+    getAppointmentsByCategory(safeStart, safeEnd),
+    getAppointmentsByPractice(safeStart, safeEnd),
+    getDailyTrend(safeStart, safeEnd),
+    getClinicianBreakdown(safeStart, safeEnd),
+    getRecentLogs(10),
+    getDataCompleteness(safeStart, safeEnd),
+  ])
 
   return (
     <ReportingDashboardClient
@@ -51,6 +60,7 @@ export default async function ReportingPage({
       dailyTrend={dailyTrend}
       clinicianBreakdown={clinicianBreakdown}
       recentLogs={recentLogs}
+      dataCompleteness={dataCompleteness}
     />
   );
 }

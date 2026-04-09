@@ -1,4 +1,13 @@
+import { getProfile } from '@/lib/supabase/auth'
 import { createClient } from '@/lib/supabase/server'
+
+/** Roles expected to submit activity logs (aligned with activity / scope usage). */
+const DATA_COMPLETENESS_ROLES = [
+  'clinician',
+  'manager',
+  'practice_manager',
+  'pcn_manager',
+] as const
 
 type ActivityReportRow = {
   log_id: string | null
@@ -55,6 +64,135 @@ export type RecentLogItem = {
   log_date: string
   hours_worked: number
   categories: RecentLogCategory[]
+}
+
+export type DataCompletenessRow = {
+  clinician_name: string
+  expected_days: number
+  logged_days: number
+  missing_days: number
+  completeness_pct: number
+}
+
+/** Weekday (Mon–Fri) count for ISO calendar dates [start, end], using UTC date arithmetic. */
+function countWeekdaysInclusive(startDate: string, endDate: string): number {
+  const start = new Date(`${startDate.slice(0, 10)}T00:00:00.000Z`).getTime()
+  const end = new Date(`${endDate.slice(0, 10)}T00:00:00.000Z`).getTime()
+  if (Number.isNaN(start) || Number.isNaN(end) || start > end) {
+    return 0
+  }
+  let n = 0
+  for (let t = start; t <= end; t += 86_400_000) {
+    const wd = new Date(t).getUTCDay()
+    if (wd >= 1 && wd <= 5) n++
+  }
+  return n
+}
+
+function isUtcWeekdayIso(isoYmd: string): boolean {
+  const t = new Date(`${isoYmd.slice(0, 10)}T00:00:00.000Z`).getTime()
+  if (Number.isNaN(t)) return false
+  const wd = new Date(t).getUTCDay()
+  return wd >= 1 && wd <= 5
+}
+
+/**
+ * Active org members who should log, vs distinct weekdays (Mon–Fri) with any activity_logs row.
+ */
+export async function getDataCompleteness(
+  startDate: string,
+  endDate: string,
+): Promise<DataCompletenessRow[]> {
+  const sessionProfile = await getProfile()
+  const supabase = await createClient()
+  const expected = countWeekdaysInclusive(startDate, endDate)
+
+  const { data: team, error: teamError } = await supabase
+    .from('profiles')
+    .select('id, full_name, clinician_id, role')
+    .eq('organisation_id', sessionProfile.organisation_id)
+    .eq('is_active', true)
+    .in('role', [...DATA_COMPLETENESS_ROLES])
+
+  if (teamError) {
+    console.error('[getDataCompleteness] profiles', teamError.message)
+    return []
+  }
+
+  if (expected === 0) {
+    return (team ?? []).map((p) => {
+      const name = String(p.full_name ?? '').trim() || '—'
+      return {
+        clinician_name: name,
+        expected_days: 0,
+        logged_days: 0,
+        missing_days: 0,
+        completeness_pct: 100,
+      }
+    })
+  }
+
+  const { data: logs, error: logsError } = await supabase
+    .from('activity_logs')
+    .select('clinician_id, log_date')
+    .gte('log_date', startDate.slice(0, 10))
+    .lte('log_date', endDate.slice(0, 10))
+
+  if (logsError) {
+    console.error('[getDataCompleteness] activity_logs', logsError.message)
+    return []
+  }
+
+  const logDatesByKey = new Map<string, Set<string>>()
+  for (const row of logs ?? []) {
+    const cid = row.clinician_id == null ? '' : String(row.clinician_id)
+    const dateStr = String(row.log_date ?? '').slice(0, 10)
+    if (!cid || !dateStr) continue
+    if (dateStr < startDate.slice(0, 10) || dateStr > endDate.slice(0, 10)) continue
+    if (!isUtcWeekdayIso(dateStr)) continue
+    if (!logDatesByKey.has(cid)) {
+      logDatesByKey.set(cid, new Set())
+    }
+    logDatesByKey.get(cid)!.add(dateStr)
+  }
+
+  const rows: DataCompletenessRow[] = []
+  for (const p of team ?? []) {
+    const name = String(p.full_name ?? '').trim() || '—'
+    const ids = new Set<string>()
+    ids.add(String(p.id))
+    if (p.clinician_id) {
+      ids.add(String(p.clinician_id))
+    }
+    const loggedDates = new Set<string>()
+    for (const cid of ids) {
+      const dates = logDatesByKey.get(cid)
+      if (dates) {
+        for (const d of dates) {
+          loggedDates.add(d)
+        }
+      }
+    }
+
+    const logged_days = loggedDates.size
+    const missing_days = Math.max(0, expected - logged_days)
+    const completeness_pct =
+      expected > 0 ? Math.round((logged_days / expected) * 1000) / 10 : 100
+
+    rows.push({
+      clinician_name: name,
+      expected_days: expected,
+      logged_days,
+      missing_days,
+      completeness_pct,
+    })
+  }
+
+  return rows.sort(
+    (a, b) =>
+      a.completeness_pct - b.completeness_pct ||
+      a.clinician_name.localeCompare(b.clinician_name),
+  )
 }
 
 async function fetchRowsForRange(

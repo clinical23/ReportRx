@@ -19,6 +19,7 @@ import type {
   CategoryBreakdownItem,
   ClinicianBreakdownItem,
   DailyTrendItem,
+  DataCompletenessRow,
   PracticeBreakdownItem,
   RecentLogItem,
   ReportingSummary,
@@ -33,6 +34,13 @@ type Props = {
   dailyTrend: DailyTrendItem[]
   clinicianBreakdown: ClinicianBreakdownItem[]
   recentLogs: RecentLogItem[]
+  dataCompleteness: DataCompletenessRow[]
+}
+
+function dataCompletenessClass(pct: number): 'good' | 'mid' | 'bad' {
+  if (pct > 90) return 'good'
+  if (pct >= 70) return 'mid'
+  return 'bad'
 }
 
 function DateFilter({ startDate, endDate }: { startDate: string; endDate: string }) {
@@ -134,7 +142,18 @@ export function ReportingDashboardClient({
   dailyTrend,
   clinicianBreakdown,
   recentLogs,
+  dataCompleteness,
 }: Props) {
+  const { overallCompletenessPct, overallTone } = useMemo(() => {
+    const totalExpected = dataCompleteness.reduce((s, r) => s + r.expected_days, 0)
+    const totalLogged = dataCompleteness.reduce((s, r) => s + r.logged_days, 0)
+    const pct =
+      totalExpected === 0
+        ? 100
+        : Math.round((totalLogged / totalExpected) * 1000) / 10
+    return { overallCompletenessPct: pct, overallTone: dataCompletenessClass(pct) }
+  }, [dataCompleteness])
+
   const practiceChartData = useMemo(
     () =>
       byPractice.map((p, idx) => ({
@@ -198,6 +217,115 @@ export function ReportingDashboardClient({
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
           <p className="text-sm text-gray-500">Avg per day</p>
           <p className="mt-1 text-3xl font-bold text-teal-600">{summary.avgAppointmentsPerDay.toLocaleString()}</p>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-sm font-semibold text-gray-900">Data completeness</h2>
+          <p className="text-xs text-gray-500">Weekdays (Mon–Fri) with a log vs expected in range</p>
+        </div>
+        <div className="mt-4 flex flex-wrap items-baseline gap-3">
+          <span
+            className={`text-4xl font-bold tabular-nums ${
+              overallTone === 'good'
+                ? 'text-emerald-600'
+                : overallTone === 'mid'
+                  ? 'text-amber-600'
+                  : 'text-red-600'
+            }`}
+          >
+            {overallCompletenessPct.toLocaleString()}%
+          </span>
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+              overallTone === 'good'
+                ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200'
+                : overallTone === 'mid'
+                  ? 'bg-amber-50 text-amber-900 ring-1 ring-amber-200'
+                  : 'bg-red-50 text-red-800 ring-1 ring-red-200'
+            }`}
+            aria-hidden
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                overallTone === 'good'
+                  ? 'bg-emerald-500'
+                  : overallTone === 'mid'
+                    ? 'bg-amber-500'
+                    : 'bg-red-500'
+              }`}
+            />
+            {overallTone === 'good'
+              ? 'On track'
+              : overallTone === 'mid'
+                ? 'Needs attention'
+                : 'At risk'}
+          </span>
+        </div>
+        <div className="mt-4 -mx-1 overflow-x-auto px-1 md:mx-0 md:px-0">
+          <table className="w-full min-w-[28rem] text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs font-medium text-gray-500">
+                <th className="px-3 py-2">Clinician</th>
+                <th className="px-3 py-2">Completeness</th>
+                <th className="hidden px-3 py-2 sm:table-cell">Logged</th>
+                <th className="hidden px-3 py-2 sm:table-cell">Missing</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dataCompleteness.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-3 py-6 text-center text-gray-500">
+                    No clinicians in scope for this report.
+                  </td>
+                </tr>
+              ) : (
+                dataCompleteness.map((row, idx) => {
+                  const tone = dataCompletenessClass(row.completeness_pct)
+                  const barColor =
+                    tone === 'good'
+                      ? 'bg-emerald-500'
+                      : tone === 'mid'
+                        ? 'bg-amber-500'
+                        : 'bg-red-500'
+                  const rowHighlight =
+                    row.missing_days > 0
+                      ? tone === 'bad'
+                        ? 'bg-red-50/80'
+                        : 'bg-amber-50/80'
+                      : ''
+                  return (
+                    <tr
+                      key={`${row.clinician_name}-${idx}`}
+                      className={`border-b border-gray-100 last:border-0 ${rowHighlight}`}
+                    >
+                      <td className="px-3 py-2 font-medium text-gray-900">{row.clinician_name}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex min-w-[8rem] flex-col gap-1">
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                            <div
+                              className={`h-full min-w-0 rounded-full transition-[width] ${barColor}`}
+                              style={{ width: `${Math.min(100, row.completeness_pct)}%` }}
+                            />
+                          </div>
+                          <span className="text-xs tabular-nums text-gray-600">
+                            {row.completeness_pct.toLocaleString()}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="hidden px-3 py-2 tabular-nums text-gray-700 sm:table-cell">
+                        {row.logged_days}/{row.expected_days}
+                      </td>
+                      <td className="hidden px-3 py-2 tabular-nums text-gray-700 sm:table-cell">
+                        {row.missing_days}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
