@@ -61,7 +61,7 @@ export default async function AdminPage() {
 
     return (
       <div className="mx-auto w-full max-w-7xl space-y-6">
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h1 className="text-2xl font-semibold text-gray-900">Admin</h1>
         <p className="mt-1 text-sm text-gray-500">
           Manage organisations, teams, and invitations for ReportRx.
@@ -69,13 +69,13 @@ export default async function AdminPage() {
       </div>
 
       {profile.role === 'superadmin' ? (
-        <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Organisations</h2>
           </div>
 
-          <div className="mb-6 overflow-hidden rounded-xl border border-gray-200">
-            <table className="w-full text-sm">
+          <div className="mb-6 overflow-x-auto rounded-xl border border-gray-200">
+            <table className="w-full min-w-[20rem] text-sm">
               <thead className="bg-gray-50">
                 <tr className="text-left text-gray-600">
                   <th className="px-4 py-2.5 font-medium">Name</th>
@@ -93,17 +93,17 @@ export default async function AdminPage() {
             </table>
           </div>
 
-          <form action={createOrganisationAction} className="grid gap-3 sm:grid-cols-[1fr_auto]">
+          <form action={createOrganisationAction} className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto]">
             <input
               type="text"
               name="name"
               required
               placeholder="New organisation name"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
             />
             <button
               type="submit"
-              className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-teal-700"
+              className="rounded-lg bg-teal-600 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-teal-700 md:py-2.5 md:text-sm"
             >
               Create organisation
             </button>
@@ -111,11 +111,11 @@ export default async function AdminPage() {
         </section>
       ) : null}
 
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">PCNs</h2>
 
-        <div className="mb-6 overflow-hidden rounded-xl border border-gray-200">
-          <table className="w-full text-sm">
+        <div className="mb-6 overflow-x-auto rounded-xl border border-gray-200">
+          <table className="w-full min-w-[16rem] text-sm">
             <thead className="bg-gray-50">
               <tr className="text-left text-gray-600">
                 <th className="px-4 py-2.5 font-medium">Name</th>
@@ -131,29 +131,29 @@ export default async function AdminPage() {
           </table>
         </div>
 
-        <form action={createPCNAction} className="grid gap-3 sm:grid-cols-[1fr_auto]">
+        <form action={createPCNAction} className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto]">
           <input type="hidden" name="organisation_id" value={currentOrgId} />
           <input
             type="text"
             name="name"
             required
             placeholder="New PCN name"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
           />
           <button
             type="submit"
-            className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-teal-700"
+            className="rounded-lg bg-teal-600 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-teal-700 md:py-2.5 md:text-sm"
           >
             Add PCN
           </button>
         </form>
       </section>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Practices</h2>
 
-        <div className="mb-6 overflow-hidden rounded-xl border border-gray-200">
-          <table className="w-full text-sm">
+        <div className="mb-6 overflow-x-auto rounded-xl border border-gray-200">
+          <table className="w-full min-w-[22rem] text-sm">
             <thead className="bg-gray-50">
               <tr className="text-left text-gray-600">
                 <th className="px-4 py-2.5 font-medium">Practice</th>
@@ -171,18 +171,18 @@ export default async function AdminPage() {
           </table>
         </div>
 
-        <form action={createPracticeAction} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+        <form action={createPracticeAction} className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
           <input type="hidden" name="organisation_id" value={currentOrgId} />
           <input
             type="text"
             name="name"
             required
             placeholder="New practice name"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
           />
           <select
             name="pcn_id"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
             defaultValue=""
           >
             <option value="">No PCN</option>
@@ -194,18 +194,18 @@ export default async function AdminPage() {
           </select>
           <button
             type="submit"
-            className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-teal-700"
+            className="rounded-lg bg-teal-600 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-teal-700 md:py-2.5 md:text-sm"
           >
             Add practice
           </button>
         </form>
       </section>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Team Members</h2>
 
-        <div className="overflow-hidden rounded-xl border border-gray-200">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-xl border border-gray-200">
+          <table className="w-full min-w-[40rem] text-sm">
             <thead className="bg-gray-50">
               <tr className="text-left text-gray-600">
                 <th className="px-4 py-2.5 font-medium">Name</th>
@@ -241,13 +241,13 @@ export default async function AdminPage() {
                     </span>
                   </td>
                   <td className="px-4 py-2.5">
-                    <form action={changeUserRoleAction} className="flex items-center gap-2">
+                    <form action={changeUserRoleAction} className="flex flex-col gap-2 md:flex-row md:items-center">
                       <input type="hidden" name="user_id" value={member.id} />
                       <select
                         name="role"
                         defaultValue={member.role}
                         disabled={profile.role !== 'superadmin'}
-                        className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-50 disabled:text-gray-400"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-50 disabled:text-gray-400 md:w-auto md:px-2 md:py-1.5 md:text-xs"
                       >
                         <option value="clinician">clinician</option>
                         <option value="manager">manager</option>
@@ -257,7 +257,7 @@ export default async function AdminPage() {
                       <button
                         type="submit"
                         disabled={profile.role !== 'superadmin'}
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 md:py-1.5 md:text-xs"
                       >
                         Save
                       </button>
@@ -275,36 +275,39 @@ export default async function AdminPage() {
         ) : null}
       </section>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Invite User</h2>
-        <form action={inviteUserAction} className="grid gap-3 sm:grid-cols-2">
+        <form action={inviteUserAction} className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <input type="hidden" name="organisation_id" value={currentOrgId} />
           <input
             type="email"
             name="email"
             required
             placeholder="Email address"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+            inputMode="email"
+            autoComplete="email"
+            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
           />
           <input
             type="text"
             name="full_name"
             placeholder="Full name (optional)"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+            autoComplete="name"
+            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
           />
           <select
             name="role"
             defaultValue="clinician"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
           >
             <option value="clinician">Clinician</option>
             <option value="manager">Manager</option>
             <option value="admin">Admin</option>
           </select>
-          <div className="sm:col-span-2">
+          <div className="md:col-span-2">
             <button
               type="submit"
-              className="rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-teal-700"
+              className="w-full rounded-lg bg-teal-600 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-teal-700 md:w-auto md:py-2.5 md:text-sm"
             >
               Send invite
             </button>

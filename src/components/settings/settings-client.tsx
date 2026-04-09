@@ -37,10 +37,10 @@ import {
 import type { PcnListItem, PracticeWithPcn } from "@/lib/supabase/data";
 
 const inputCls =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500";
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-base shadow-sm placeholder:text-slate-400 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 md:py-2.5 md:text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500";
 
 const selectCls =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100";
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-base shadow-sm focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 md:py-2.5 md:text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100";
 
 type Props = {
   initialPcns: PcnListItem[];
@@ -103,8 +103,8 @@ export function SettingsClient({ initialPcns, initialPractices }: Props) {
       {/* PCNs with nested practices */}
       <Card>
         <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
               <CardTitle className="text-base">
                 <Network className="mr-2 inline size-4 text-primary" />
                 PCNs &amp; Practices
@@ -117,6 +117,7 @@ export function SettingsClient({ initialPcns, initialPractices }: Props) {
             <Button
               type="button"
               size="sm"
+              className="w-full shrink-0 sm:w-auto"
               onClick={() => setAddPcnOpen(true)}
             >
               <Plus className="size-4" aria-hidden />
@@ -426,16 +427,17 @@ function AddPcnDialog({
               {error}
             </p>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button
               type="button"
               variant="outline"
               disabled={busy}
+              className="w-full sm:w-auto"
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={busy}>
+            <Button type="submit" disabled={busy} className="w-full sm:w-auto">
               {busy ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
@@ -515,16 +517,17 @@ function EditNameDialog({
               {error}
             </p>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button
               type="button"
               variant="outline"
               disabled={busy}
+              className="w-full sm:w-auto"
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={busy}>
+            <Button type="submit" disabled={busy} className="w-full sm:w-auto">
               {busy ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
@@ -585,11 +588,12 @@ function ConfirmDeleteDialog({
             {error}
           </p>
         )}
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-0">
           <Button
             type="button"
             variant="outline"
             disabled={busy}
+            className="w-full sm:w-auto"
             onClick={() => onOpenChange(false)}
           >
             Cancel
@@ -598,6 +602,7 @@ function ConfirmDeleteDialog({
             type="button"
             variant="destructive"
             disabled={busy}
+            className="w-full sm:w-auto"
             onClick={handleDelete}
           >
             {busy ? "Deleting…" : "Delete"}
@@ -682,16 +687,17 @@ function AssignPcnDialog({
               {error}
             </p>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button
               type="button"
               variant="outline"
               disabled={busy}
+              className="w-full sm:w-auto"
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={busy}>
+            <Button type="submit" disabled={busy} className="w-full sm:w-auto">
               {busy ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>

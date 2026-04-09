@@ -62,8 +62,8 @@ function StatTile({
   const content = (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm",
-        "border-l-4 pl-5",
+        "relative overflow-hidden rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6",
+        "border-l-4 pl-4 sm:pl-5",
         borders[accent],
         href &&
           "cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md",
@@ -177,8 +177,8 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
-      <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-teal-50 via-white to-gray-50/80 p-6 shadow-sm sm:p-8">
+    <div className="mx-auto min-w-0 max-w-6xl space-y-8">
+      <div className="relative w-full overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-teal-50 via-white to-gray-50/80 p-4 shadow-sm sm:p-8">
         <div className="max-w-2xl">
           <h1 className="text-2xl font-semibold text-gray-900 sm:text-3xl">
             Dashboard
@@ -190,22 +190,16 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        {row1.map((m) => (
-          <StatTile key={m.label} {...m} />
-        ))}
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        {row2.map((m) => (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[...row1, ...row2].map((m) => (
           <StatTile key={m.label} {...m} />
         ))}
       </div>
 
       <Card>
         <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
               <CardTitle className="text-base">Recent activity</CardTitle>
               <CardDescription>
                 Latest activity log entries (appointments summed per

@@ -79,8 +79,8 @@ export default function OnboardingPage() {
   // User signed up but has no org — they weren't invited
   if (noOrg) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="w-full max-w-sm text-center">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="mx-4 w-full max-w-sm text-center md:mx-auto">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-teal-600 mb-4">
             <span className="text-white font-bold text-lg">Rx</span>
           </div>
@@ -114,9 +114,9 @@ export default function OnboardingPage() {
 
   // User has org but needs to enter their name
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="mx-4 w-full max-w-sm md:mx-auto">
+        <div className="mb-8 text-center">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-teal-600 mb-4">
             <span className="text-white font-bold text-lg">Rx</span>
           </div>
@@ -124,10 +124,10 @@ export default function OnboardingPage() {
           <p className="text-sm text-gray-500 mt-1">Just one more step — enter your name</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
                 Your full name
               </label>
               <input
@@ -137,7 +137,8 @@ export default function OnboardingPage() {
                 placeholder="e.g. Layla Ahmed"
                 required
                 autoFocus
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-gray-400"
+                autoComplete="name"
+                className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base text-gray-900 placeholder:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
               <p className="text-xs text-gray-400 mt-1">
                 This is how your team will see you in reports.
@@ -146,7 +147,7 @@ export default function OnboardingPage() {
             <button
               type="submit"
               disabled={saving}
-              className="w-full py-2.5 px-4 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors"
+              className="w-full rounded-lg bg-teal-600 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Continue'}
             </button>

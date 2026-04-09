@@ -27,10 +27,10 @@ import type {
 import { cn } from "@/lib/utils";
 
 const inputClassName =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20";
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-base shadow-sm placeholder:text-slate-400 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 md:py-2.5 md:text-sm";
 
 const selectClassName =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm text-slate-800 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20";
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-base shadow-sm text-slate-800 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 md:py-2.5 md:text-sm";
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -134,7 +134,7 @@ export function CliniciansView({
         {canAdd ? (
           <Button
             type="button"
-            className="shrink-0 self-start bg-teal-600 text-white hover:bg-teal-700 sm:self-auto"
+            className="w-full shrink-0 self-start bg-teal-600 text-white hover:bg-teal-700 sm:w-auto sm:self-auto"
             onClick={() => setAddOpen(true)}
           >
             Add clinician
@@ -142,7 +142,7 @@ export function CliniciansView({
         ) : null}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="min-w-0 overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         {clinicians.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-slate-600">
             No clinicians yet.
@@ -158,7 +158,7 @@ export function CliniciansView({
             ) : null}
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="min-w-0">
             <table className="w-full min-w-[56rem] text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50 text-left">

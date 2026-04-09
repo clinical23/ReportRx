@@ -33,7 +33,7 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="mx-auto min-w-0 max-w-3xl space-y-8">
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">
           Settings
@@ -51,20 +51,20 @@ export default async function SettingsPage() {
             Your linked practice and timezone.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-2">
+        <CardContent className="flex flex-col space-y-4">
+          <div className="grid w-full gap-2">
             <label className="text-xs font-medium text-gray-600">
               Practice name
             </label>
-            <div className="rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2.5 text-sm text-gray-900">
+            <div className="rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-3 text-base text-gray-900 md:py-2.5 md:text-sm">
               {practiceName}
             </div>
           </div>
-          <div className="grid gap-2">
+          <div className="grid w-full gap-2">
             <label className="text-xs font-medium text-gray-600">
               Timezone
             </label>
-            <div className="rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2.5 text-sm text-gray-900">
+            <div className="rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-3 text-base text-gray-900 md:py-2.5 md:text-sm">
               Europe/London (UK)
             </div>
           </div>

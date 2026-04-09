@@ -21,12 +21,14 @@ export default async function CliniciansPage() {
     ]);
 
   return (
-    <CliniciansView
-      clinicians={clinicians}
-      practices={practices}
-      pcns={pcns}
-      permissions={permissions}
-      clinicianTypes={clinicianTypes}
-    />
+    <div className="min-w-0">
+      <CliniciansView
+        clinicians={clinicians}
+        practices={practices}
+        pcns={pcns}
+        permissions={permissions}
+        clinicianTypes={clinicianTypes}
+      />
+    </div>
   );
 }
