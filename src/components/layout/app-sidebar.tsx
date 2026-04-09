@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { appNavAdminItem, appNavItems } from "@/components/layout/app-nav-items";
 
 type Props = {
+  practiceName: string;
   canAccessAdmin: boolean;
   profile: {
     full_name: string;
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export default function AppSidebar({
+  practiceName,
   canAccessAdmin,
   profile,
   signOutAction,
@@ -49,9 +51,12 @@ export default function AppSidebar({
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-600">
             <span className="text-sm font-bold text-white">Rx</span>
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-gray-900">ReportRx</p>
             <p className="text-xs text-gray-400">Clinical Workspace</p>
+            <p className="mt-1 truncate text-xs font-medium text-gray-600">
+              {practiceName}
+            </p>
           </div>
         </div>
       </div>

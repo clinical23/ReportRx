@@ -5,7 +5,6 @@ import { useState } from "react";
 import AppSidebar from "@/components/layout/app-sidebar";
 import { MobileDrawer } from "@/components/layout/mobile-drawer";
 import { MobileHeader } from "@/components/layout/mobile-header";
-import { TopNavbar } from "@/components/layout/top-navbar";
 import { signOutAction } from "@/app/actions/auth";
 
 type Profile = {
@@ -30,6 +29,7 @@ export function AppLayoutClient({
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const sidebarProps = {
+    practiceName,
     canAccessAdmin,
     profile,
     signOutAction,
@@ -43,22 +43,19 @@ export function AppLayoutClient({
 
       <MobileHeader
         onMenuClick={() => setDrawerOpen(true)}
-        fullName={profile.full_name}
-        signOutAction={signOutAction}
+        practiceName={practiceName}
       />
 
       <MobileDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
+        practiceName={practiceName}
         canAccessAdmin={canAccessAdmin}
         profile={profile}
         signOutAction={signOutAction}
       />
 
       <main className="min-w-0 w-full flex-1 overflow-auto pt-14 md:pt-0">
-        <div className="hidden md:block">
-          <TopNavbar practiceName={practiceName} />
-        </div>
         <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
       </main>
     </div>

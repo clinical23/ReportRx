@@ -10,6 +10,7 @@ import { appNavAdminItem, appNavItems, type AppNavItem } from "./app-nav-items";
 type Props = {
   open: boolean;
   onClose: () => void;
+  practiceName: string;
   canAccessAdmin: boolean;
   profile: {
     full_name: string;
@@ -56,6 +57,7 @@ function DrawerNavLink({
 export function MobileDrawer({
   open,
   onClose,
+  practiceName,
   canAccessAdmin,
   profile,
   signOutAction,
@@ -120,9 +122,12 @@ export function MobileDrawer({
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-600">
               <span className="text-sm font-bold text-white">Rx</span>
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-semibold text-gray-900">ReportRx</p>
               <p className="text-xs text-gray-400">Clinical Workspace</p>
+              <p className="mt-1 truncate text-xs font-medium text-gray-600">
+                {practiceName}
+              </p>
             </div>
           </div>
           <button
