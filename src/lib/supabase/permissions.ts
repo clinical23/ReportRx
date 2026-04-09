@@ -8,7 +8,7 @@ type RoleGraphRole = {
 };
 
 type RoleGraphRow = {
-  roles: RoleGraphRole | null;
+  roles: RoleGraphRole | RoleGraphRole[] | null;
 };
 
 const ADMIN_ROLE_NAMES = new Set(["admin", "administrator"]);
@@ -51,13 +51,14 @@ async function fetchUserRoleGraph(userId: string): Promise<{
   >();
   const keys = new Set<string>();
 
-  for (const row of (data ?? []) as RoleGraphRow[]) {
-    const r = row.roles;
-    if (!r) continue;
-    roleMap.set(r.id, { id: r.id, name: r.name, category: r.category });
-    for (const rp of r.role_permissions ?? []) {
-      const k = rp.permissions?.key;
-      if (k) keys.add(k);
+  for (const row of (data ?? []) as unknown as RoleGraphRow[]) {
+    const roleEntries = Array.isArray(row.roles) ? row.roles : row.roles ? [row.roles] : [];
+    for (const r of roleEntries) {
+      roleMap.set(r.id, { id: r.id, name: r.name, category: r.category });
+      for (const rp of r.role_permissions ?? []) {
+        const k = rp.permissions?.key;
+        if (k) keys.add(k);
+      }
     }
   }
 

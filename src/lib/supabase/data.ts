@@ -1,29 +1,36 @@
 import { londonMonthRangeISO } from "@/lib/datetime";
 
 import type { Clinician } from "./database.types";
+import { getProfile } from "@/lib/supabase/auth";
 import { createClient } from "./server";
 
-/** Activity log and other call sites — minimal fields only */
+/** Team members (profiles) for activity bulk entry — same org as current user */
 export type ClinicianListItem = {
   id: string;
   name: string;
   role: string;
-  clinician_type_id: string | null;
 };
 
 export async function listClinicians(): Promise<ClinicianListItem[]> {
+  const { organisation_id: organisationId } = await getProfile();
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("clinicians")
-    .select("id, name, role, clinician_type_id")
-    .order("name", { ascending: true });
+    .from("profiles")
+    .select("id, full_name, role")
+    .eq("organisation_id", organisationId)
+    .eq("is_active", true)
+    .order("full_name", { ascending: true });
 
   if (error) {
     console.error("[listClinicians]", error.message);
     return [];
   }
 
-  return (data ?? []) as ClinicianListItem[];
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.full_name?.trim() || "—",
+    role: row.role,
+  }));
 }
 
 export type PcnListItem = {

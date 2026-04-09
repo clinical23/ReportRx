@@ -3,7 +3,13 @@ import type { User } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 import { createClient } from "./server";
 
-export type AppRole = "clinician" | "practice_manager" | "pcn_manager";
+export type AppRole =
+  | "clinician"
+  | "practice_manager"
+  | "pcn_manager"
+  | "manager"
+  | "admin"
+  | "superadmin";
 
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -39,7 +45,10 @@ export function isAppRole(value: string | undefined): value is AppRole {
   return (
     value === "clinician" ||
     value === "practice_manager" ||
-    value === "pcn_manager"
+    value === "pcn_manager" ||
+    value === "manager" ||
+    value === "admin" ||
+    value === "superadmin"
   );
 }
 
@@ -49,6 +58,12 @@ export function formatRoleLabel(role: string): string {
       return "PCN Manager";
     case "practice_manager":
       return "Practice Manager";
+    case "manager":
+      return "Manager";
+    case "admin":
+      return "Admin";
+    case "superadmin":
+      return "Super Admin";
     case "clinician":
       return "Clinician";
     default:

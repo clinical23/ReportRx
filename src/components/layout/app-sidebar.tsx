@@ -6,9 +6,9 @@ import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import {
   Activity,
+  ShieldCheck,
   BarChart3,
   LayoutDashboard,
-  LogOut,
   Moon,
   Pill,
   Settings,
@@ -16,14 +16,12 @@ import {
   Sun,
 } from "lucide-react";
 
-import { signOut } from "@/app/actions/auth";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/activity", label: "Reporting", icon: BarChart3 },
-  { href: "/reporting", label: "Activity", icon: Activity },
+  { href: "/activity", label: "Activity", icon: Activity },
+  { href: "/reporting", label: "Reporting", icon: BarChart3 },
   { href: "/clinicians", label: "Clinicians", icon: Stethoscope },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -33,6 +31,7 @@ type Props = {
   userEmail: string;
   initials: string;
   roleLabel: string;
+  canAccessAdmin: boolean;
 };
 
 export function AppSidebar({
@@ -40,6 +39,7 @@ export function AppSidebar({
   userEmail,
   initials,
   roleLabel,
+  canAccessAdmin,
 }: Props) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
@@ -48,6 +48,10 @@ export function AppSidebar({
   useEffect(() => setMounted(true), []);
 
   const isDark = mounted && theme === "dark";
+
+  const navItems = canAccessAdmin
+    ? [...nav, { href: "/admin", label: "Admin", icon: ShieldCheck }]
+    : nav;
 
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-slate-800 bg-slate-950">
@@ -66,7 +70,7 @@ export function AppSidebar({
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
-        {nav.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, label, icon: Icon }) => {
           const active =
             href === "/"
               ? pathname === "/"
@@ -138,17 +142,6 @@ export function AppSidebar({
           )}
         </button>
 
-        <form action={signOut}>
-          <Button
-            type="submit"
-            variant="ghost"
-            size="sm"
-            className="h-9 w-full justify-center text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-          >
-            <LogOut className="size-4 opacity-70" />
-            Sign out
-          </Button>
-        </form>
       </div>
     </aside>
   );

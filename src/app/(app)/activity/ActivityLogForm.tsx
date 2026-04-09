@@ -5,14 +5,14 @@ import { useState, useTransition } from "react";
 import { bulkSaveActivityLogs, addActivityCategory, saveActivityLog } from "@/app/actions/activity";
 import { Button } from "@/components/ui/button";
 import type { ActivityCategory } from "@/lib/supabase/activity";
+import type { ClinicianListItem } from "@/lib/supabase/data";
 import { todayISOInLondon } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
-type Clinician = { id: string; name: string; role: string };
 type Practice = { id: string; name: string };
 
 type Props = {
-  clinicians: Clinician[];
+  clinicians: ClinicianListItem[];
   practices: Practice[];
   categories: ActivityCategory[];
   /** Clinician users: single tab, locked identity. Managers: both tabs. */
@@ -120,7 +120,6 @@ export default function ActivityLogForm({
         return;
       }
       const result = await saveActivityLog({
-        clinician_id: cid,
         practice_id: practiceId,
         log_date: logDate,
         hours_worked: parseFloat(hours) || null,
