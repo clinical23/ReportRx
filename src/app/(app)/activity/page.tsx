@@ -6,6 +6,7 @@ import {
 } from "@/lib/supabase/auth-profile";
 import {
   listPractices,
+  listPracticesForActivity,
   listActivityCategories,
   getMyWeekStatus,
   listRecentLogsGrouped,
@@ -55,10 +56,19 @@ export default async function ActivityPage() {
       ? getOrganisationSettingsRecord(profileOrgId)
       : Promise.resolve(null)
 
+    const practicesPromise =
+      profile?.id && profileOrgId
+        ? listPracticesForActivity({
+            role,
+            profileId: profile.id,
+            organisationId: profileOrgId,
+          })
+        : listPractices()
+
     const [clinicians, practices, categories, recentLogs, weekStatus, orgRecord] =
       await Promise.all([
         listClinicians(),
-        listPractices(),
+        practicesPromise,
         listActivityCategories(),
         listRecentLogsGrouped(10, scope),
         profileOrgId && profile?.id ? getMyWeekStatus(profile.id, profileOrgId) : Promise.resolve([]),

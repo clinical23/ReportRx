@@ -14,6 +14,18 @@ type Props = {
   members: TeamMemberRow[];
 };
 
+function practicesDisplay(row: TeamMemberRow) {
+  if (row.clinician_assignment) {
+    if (!row.clinician_assignment.restricted) {
+      return (
+        <span className="text-gray-400">All practices</span>
+      );
+    }
+    return row.clinician_assignment.names_csv || "—";
+  }
+  return row.practices_label;
+}
+
 function roleBadgeClass(role: string): string {
   switch (role) {
     case "clinician":
@@ -115,7 +127,9 @@ export function CliniciansView({ members }: Props) {
                   )}
                   <span>Last: {row.last_activity_date ? formatDateUK(row.last_activity_date) : "Never"}</span>
                 </div>
-                <p className="mt-2 text-xs text-gray-600">Practices: {row.practices_label}</p>
+                <p className="mt-2 text-xs text-gray-600">
+                  Practices: {practicesDisplay(row)}
+                </p>
               </div>
             ))}
           </div>
@@ -199,8 +213,8 @@ export function CliniciansView({ members }: Props) {
                       ? formatDateUK(row.last_activity_date)
                       : "Never"}
                   </td>
-                  <td className="min-w-[8rem] px-4 py-3 text-gray-700">
-                    {row.practices_label}
+                  <td className="min-w-[8rem] max-w-[14rem] px-4 py-3 text-gray-700">
+                    {practicesDisplay(row)}
                   </td>
                 </tr>
               ))}

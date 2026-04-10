@@ -1,6 +1,7 @@
 import { londonMonthRangeISO } from "@/lib/datetime";
 
 import type { Clinician } from "./database.types";
+import { listOrgClinicianPracticeAssignments } from "@/lib/supabase/clinician-practice-assignments";
 import { getProfile } from "@/lib/supabase/auth";
 import { createClient } from "./server";
 
@@ -42,6 +43,11 @@ export type TeamMemberRow = {
   is_active: boolean;
   last_activity_date: string | null;
   practices_label: string;
+  /** Profile-based practice assignments (clinicians only). */
+  clinician_assignment?: {
+    restricted: boolean;
+    names_csv: string;
+  };
 };
 
 /**
@@ -68,6 +74,14 @@ export async function listOrganisationTeamMembers(
   const rows = profiles ?? [];
   if (rows.length === 0) {
     return [];
+  }
+
+  const assignmentRows = await listOrgClinicianPracticeAssignments(organisationId);
+  const assignmentPracticeIdsByProfileId = new Map<string, string[]>();
+  for (const ar of assignmentRows) {
+    const list = assignmentPracticeIdsByProfileId.get(ar.clinician_id) ?? [];
+    list.push(ar.practice_id);
+    assignmentPracticeIdsByProfileId.set(ar.clinician_id, list);
   }
 
   const clinicianIdsForLinks = [
@@ -181,14 +195,34 @@ export async function listOrganisationTeamMembers(
     const rawActive = (p as { is_active?: boolean | null }).is_active;
     const is_active = rawActive !== false;
 
+    const roleStr = String(p.role ?? "clinician");
+    let clinician_assignment: TeamMemberRow["clinician_assignment"];
+    if (roleStr === "clinician") {
+      const assignedPids =
+        assignmentPracticeIdsByProfileId.get(pidKey) ?? [];
+      if (assignedPids.length === 0) {
+        clinician_assignment = { restricted: false, names_csv: "" };
+      } else {
+        const names = assignedPids
+          .map((prid) => practiceNameById.get(prid))
+          .filter((n): n is string => Boolean(n))
+          .sort();
+        clinician_assignment = {
+          restricted: true,
+          names_csv: names.join(", ") || "—",
+        };
+      }
+    }
+
     return {
       id: String(p.id),
       full_name: name,
       email,
-      role: String(p.role ?? "clinician"),
+      role: roleStr,
       is_active,
       last_activity_date: lastActivity,
       practices_label,
+      clinician_assignment,
     };
   });
 }

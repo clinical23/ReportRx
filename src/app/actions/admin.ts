@@ -108,3 +108,96 @@ export async function changeUserRole(formData: FormData): Promise<void> {
 
   revalidatePath('/admin')
 }
+
+export async function syncClinicianPracticeAssignments(
+  clinicianId: string,
+  practiceIds: string[],
+): Promise<{ success: boolean; error?: string }> {
+  const profile = await requireRole('superadmin', 'admin')
+  const supabase = await createClient()
+  const orgId = profile.organisation_id
+  const trimmedClinician = clinicianId?.trim()
+  if (!trimmedClinician) {
+    return { success: false, error: 'Clinician is required.' }
+  }
+
+  const { data: target } = await supabase
+    .from('profiles')
+    .select('id, role, organisation_id')
+    .eq('id', trimmedClinician)
+    .maybeSingle()
+
+  if (
+    !target ||
+    target.organisation_id !== orgId ||
+    target.role !== 'clinician'
+  ) {
+    return { success: false, error: 'Invalid clinician for this organisation.' }
+  }
+
+  const uniquePracticeIds = [...new Set(practiceIds.filter(Boolean))]
+
+  if (uniquePracticeIds.length > 0) {
+    const { data: valid, error: validErr } = await supabase
+      .from('practices')
+      .select('id')
+      .eq('organisation_id', orgId)
+      .in('id', uniquePracticeIds)
+    if (validErr) {
+      return { success: false, error: validErr.message }
+    }
+    if (!valid || valid.length !== uniquePracticeIds.length) {
+      return { success: false, error: 'One or more practices are invalid.' }
+    }
+  }
+
+  const { data: existing, error: existingErr } = await supabase
+    .from('clinician_practice_assignments')
+    .select('practice_id')
+    .eq('clinician_id', trimmedClinician)
+    .eq('organisation_id', orgId)
+
+  if (existingErr) {
+    return { success: false, error: existingErr.message }
+  }
+
+  const existingSet = new Set(
+    (existing ?? []).map((r) => String(r.practice_id)),
+  )
+  const newSet = new Set(uniquePracticeIds)
+  const toRemove = [...existingSet].filter((id) => !newSet.has(id))
+  const toAdd = [...newSet].filter((id) => !existingSet.has(id))
+
+  if (toRemove.length > 0) {
+    const { error: delErr } = await supabase
+      .from('clinician_practice_assignments')
+      .delete()
+      .eq('clinician_id', trimmedClinician)
+      .eq('organisation_id', orgId)
+      .in('practice_id', toRemove)
+    if (delErr) {
+      return { success: false, error: delErr.message }
+    }
+  }
+
+  if (toAdd.length > 0) {
+    const { error: insErr } = await supabase
+      .from('clinician_practice_assignments')
+      .insert(
+        toAdd.map((practice_id) => ({
+          clinician_id: trimmedClinician,
+          practice_id,
+          organisation_id: orgId,
+          assigned_by: profile.id,
+        })),
+      )
+    if (insErr) {
+      return { success: false, error: insErr.message }
+    }
+  }
+
+  revalidatePath('/admin')
+  revalidatePath('/activity')
+  revalidatePath('/clinicians')
+  return { success: true }
+}

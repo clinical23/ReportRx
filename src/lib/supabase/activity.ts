@@ -4,6 +4,10 @@ import {
   todayISOInLondon,
 } from '@/lib/datetime'
 import { getProfile } from '@/lib/supabase/auth'
+import {
+  getAssignedPracticeIdsForProfile,
+  isClinicianOnlyActivityRole,
+} from '@/lib/supabase/clinician-practice-assignments'
 import { createClient } from '@/lib/supabase/server'
 
 export type Practice = {
@@ -146,6 +150,31 @@ export async function listPractices(): Promise<Practice[]> {
     .order('name')
   if (error) { console.error('[listPractices]', error.message); return [] }
   return data ?? []
+}
+
+/**
+ * Practices shown in the activity log dropdown.
+ * Clinicians with at least one assignment row only see assigned practices; no rows = all practices.
+ * Managers/admins always see all practices visible via RLS.
+ */
+export async function listPracticesForActivity(opts: {
+  role: string | null
+  profileId: string
+  organisationId: string
+}): Promise<Practice[]> {
+  const all = await listPractices()
+  if (!isClinicianOnlyActivityRole(opts.role)) {
+    return all
+  }
+  const assignedIds = await getAssignedPracticeIdsForProfile(
+    opts.profileId,
+    opts.organisationId,
+  )
+  if (assignedIds.length === 0) {
+    return all
+  }
+  const allowed = new Set(assignedIds)
+  return all.filter((p) => allowed.has(p.id))
 }
 
 export async function listActivityCategories(): Promise<ActivityCategory[]> {

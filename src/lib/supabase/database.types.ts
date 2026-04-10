@@ -112,6 +112,48 @@ export interface Database {
           },
         ];
       };
+      clinician_practice_assignments: {
+        Row: {
+          id: string;
+          clinician_id: string;
+          practice_id: string;
+          organisation_id: string;
+          assigned_at: string;
+          assigned_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          clinician_id: string;
+          practice_id: string;
+          organisation_id: string;
+          assigned_at?: string;
+          assigned_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          clinician_id?: string;
+          practice_id?: string;
+          organisation_id?: string;
+          assigned_at?: string;
+          assigned_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "clinician_practice_assignments_clinician_id_fkey";
+            columns: ["clinician_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "clinician_practice_assignments_practice_id_fkey";
+            columns: ["practice_id"];
+            isOneToOne: false;
+            referencedRelation: "practices";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       pcns: {
         Row: {
           id: string;

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 
 import { getProfile } from '@/lib/supabase/auth'
+import { getAssignedPracticeIdsForProfileWithClient } from '@/lib/supabase/clinician-practice-assignments'
 import { createClient } from '@/lib/supabase/server'
 
 export type CategoryEntry = {
@@ -56,6 +57,20 @@ export async function saveActivityLog(input: SaveActivityLogInput): Promise<Save
     .maybeSingle()
   if (!practice) {
     return { success: false, error: 'Invalid practice.' }
+  }
+
+  if (profile.role === 'clinician') {
+    const assigned = await getAssignedPracticeIdsForProfileWithClient(
+      supabase,
+      profile.id,
+      profile.organisation_id,
+    )
+    if (
+      assigned.length > 0 &&
+      !assigned.includes(String(input.practice_id))
+    ) {
+      return { success: false, error: 'You are not assigned to this practice.' }
+    }
   }
 
   // Verify all categories belong to user's organisation
@@ -124,6 +139,17 @@ export async function getPreviousDayLog(
   const practice = practiceId.trim()
   if (!practice) {
     return { success: false, error: 'Please select a practice first.' }
+  }
+
+  if (profile.role === 'clinician') {
+    const assigned = await getAssignedPracticeIdsForProfileWithClient(
+      supabase,
+      profile.id,
+      profile.organisation_id,
+    )
+    if (assigned.length > 0 && !assigned.includes(practice)) {
+      return { success: false, error: 'You are not assigned to this practice.' }
+    }
   }
 
   const today = new Date()

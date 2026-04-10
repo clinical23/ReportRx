@@ -5,6 +5,7 @@ import {
   createPractice,
 } from '@/app/actions/admin'
 import { AdminInviteForm } from '@/components/admin/admin-invite-form'
+import { AdminPracticeAssignments } from '@/components/admin/admin-practice-assignments'
 import { requireRole } from '@/lib/supabase/auth'
 import {
   listOrganisations,
@@ -12,6 +13,7 @@ import {
   listPractices,
   listTeamMembers,
 } from '@/lib/supabase/admin'
+import { listOrgClinicianPracticeAssignments } from '@/lib/supabase/clinician-practice-assignments'
 import { Users } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -35,11 +37,20 @@ export default async function AdminPage({
   const organisations = await listOrganisations(profile)
   const currentOrgId = profile.organisation_id
 
-  const [pcns, practices, teamMembers] = await Promise.all([
+  const [pcns, practices, teamMembers, assignmentRows] = await Promise.all([
     listPCNs(currentOrgId),
     listPractices(currentOrgId),
     listTeamMembers(currentOrgId),
+    listOrgClinicianPracticeAssignments(currentOrgId),
   ])
+
+  const clinicianProfilesForAssignments = teamMembers
+    .filter((m) => m.role === 'clinician')
+    .map((m) => ({
+      id: m.id,
+      full_name: m.full_name,
+      email: m.email,
+    }))
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -282,6 +293,17 @@ export default async function AdminPage({
           </p>
         ) : null}
       </section>
+
+      <AdminPracticeAssignments
+        clinicians={clinicianProfilesForAssignments}
+        practices={practices.map((p) => ({
+          id: p.id,
+          name: p.name,
+          pcn_id: p.pcn_id,
+          pcn_name: p.pcn_name,
+        }))}
+        assignments={assignmentRows}
+      />
 
       <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Invite User</h2>
