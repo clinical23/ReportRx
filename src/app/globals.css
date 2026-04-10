@@ -17,7 +17,7 @@
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 16%;
     --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 46%;
+    --muted-foreground: 215 20% 40%;
     --accent: 173 50% 95%;
     --accent-foreground: 173 80% 28%;
     --success: 160 84% 39%;
@@ -58,6 +58,9 @@
 @layer base {
   * {
     @apply border-border;
+  }
+  :where(a, button, input, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
   body {
     @apply bg-background text-foreground antialiased;

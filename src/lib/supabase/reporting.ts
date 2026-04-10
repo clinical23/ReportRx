@@ -163,15 +163,12 @@ function isUtcWeekdayIso(isoYmd: string): boolean {
 /**
  * Active org members who should log, vs distinct weekdays (Mon–Fri) with any activity_logs row.
  */
-export async function getDataCompleteness(
+function dataCompletenessFromRows(
+  rows: ActivityReportRow[],
   startDate: string,
   endDate: string,
-  practiceScope?: ReportingPracticeScope,
-): Promise<DataCompletenessRow[]> {
-  await getProfile()
-  const expected = countWeekdaysInclusive(startDate, endDate)
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
-
+  expected: number,
+): DataCompletenessRow[] {
   const loggedDatesByClinician = new Map<string, Set<string>>()
   const nameByClinician = new Map<string, string>()
 
@@ -224,6 +221,17 @@ export async function getDataCompleteness(
       a.completeness_pct - b.completeness_pct ||
       a.clinician_name.localeCompare(b.clinician_name),
   )
+}
+
+export async function getDataCompleteness(
+  startDate: string,
+  endDate: string,
+  practiceScope?: ReportingPracticeScope,
+): Promise<DataCompletenessRow[]> {
+  await getProfile()
+  const expected = countWeekdaysInclusive(startDate, endDate)
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  return dataCompletenessFromRows(rows, startDate, endDate, expected)
 }
 
 export type MyActivitySummary = {
@@ -429,12 +437,7 @@ function hoursByUniqueLog(rows: ActivityReportRow[]): Map<string, number> {
   return byLog
 }
 
-export async function getReportingSummary(
-  startDate: string,
-  endDate: string,
-  practiceScope?: ReportingPracticeScope,
-): Promise<ReportingSummary> {
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+function reportingSummaryFromRows(rows: ActivityReportRow[]): ReportingSummary {
   const totalAppointments = rows.reduce((sum, row) => sum + Number(row.appointment_count ?? 0), 0)
   const uniqueClinicians = new Set(rows.map((r) => r.clinician_id).filter(Boolean))
   const uniqueLogs = new Set(rows.map((r) => r.log_id).filter(Boolean))
@@ -452,12 +455,7 @@ export async function getReportingSummary(
   }
 }
 
-export async function getAppointmentsByCategory(
-  startDate: string,
-  endDate: string,
-  practiceScope?: ReportingPracticeScope,
-): Promise<CategoryBreakdownItem[]> {
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+function appointmentsByCategoryFromRows(rows: ActivityReportRow[]): CategoryBreakdownItem[] {
   const totals = new Map<string, number>()
   let grandTotal = 0
 
@@ -477,12 +475,7 @@ export async function getAppointmentsByCategory(
     .sort((a, b) => b.total_count - a.total_count)
 }
 
-export async function getAppointmentsByPractice(
-  startDate: string,
-  endDate: string,
-  practiceScope?: ReportingPracticeScope,
-): Promise<PracticeBreakdownItem[]> {
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+function appointmentsByPracticeFromRows(rows: ActivityReportRow[]): PracticeBreakdownItem[] {
   const map = new Map<string, { total_count: number; logIds: Set<string>; hoursByLog: Map<string, number> }>()
 
   for (const row of rows) {
@@ -512,12 +505,7 @@ export async function getAppointmentsByPractice(
     .sort((a, b) => b.total_count - a.total_count)
 }
 
-export async function getDailyTrend(
-  startDate: string,
-  endDate: string,
-  practiceScope?: ReportingPracticeScope,
-): Promise<DailyTrendItem[]> {
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+function dailyTrendFromRows(rows: ActivityReportRow[]): DailyTrendItem[] {
   const map = new Map<string, { total_appointments: number; hoursByLog: Map<string, number> }>()
 
   for (const row of rows) {
@@ -543,12 +531,7 @@ export async function getDailyTrend(
     .sort((a, b) => (a.date < b.date ? -1 : 1))
 }
 
-export async function getClinicianBreakdown(
-  startDate: string,
-  endDate: string,
-  practiceScope?: ReportingPracticeScope,
-): Promise<ClinicianBreakdownItem[]> {
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+function clinicianBreakdownFromRows(rows: ActivityReportRow[]): ClinicianBreakdownItem[] {
   const map = new Map<
     string,
     { total_appointments: number; practices: Set<string>; logs: Set<string>; hoursByLog: Map<string, number> }
@@ -583,6 +566,114 @@ export async function getClinicianBreakdown(
       log_count: value.logs.size,
     }))
     .sort((a, b) => b.total_appointments - a.total_appointments)
+}
+
+function recentLogsFromRows(rows: ActivityReportRow[], limit: number): RecentLogItem[] {
+  const sorted = [...rows].sort((a, b) =>
+    String(b.log_date ?? '').localeCompare(String(a.log_date ?? '')),
+  )
+  const grouped = new Map<string, RecentLogItem>()
+
+  for (const row of sorted) {
+    if (!row.log_id) continue
+    if (!grouped.has(row.log_id)) {
+      grouped.set(row.log_id, {
+        clinician_name: (row.clinician_name ?? 'Unknown clinician').trim() || 'Unknown clinician',
+        practice_name: (row.practice_name ?? 'Unknown practice').trim() || 'Unknown practice',
+        log_date: row.log_date?.slice(0, 10) ?? '',
+        hours_worked: Number(row.hours_worked ?? 0),
+        categories: [],
+      })
+    }
+    const g = grouped.get(row.log_id)
+    if (!g) continue
+    g.categories.push({
+      name: (row.category_name ?? 'Uncategorised').trim() || 'Uncategorised',
+      count: Number(row.appointment_count ?? 0),
+    })
+    if (!g.log_date && row.log_date) {
+      g.log_date = row.log_date.slice(0, 10)
+    }
+  }
+
+  return Array.from(grouped.values()).slice(0, limit)
+}
+
+/**
+ * One `activity_report` query for the reporting dashboard (replaces six identical range fetches).
+ * There is no `monthly_summary` materialized view in this schema; aggregates are derived from
+ * the `activity_report` view in memory after a single fetch.
+ */
+export async function loadReportingDashboardData(
+  startDate: string,
+  endDate: string,
+  practiceScope?: ReportingPracticeScope,
+): Promise<{
+  summary: ReportingSummary
+  byCategory: CategoryBreakdownItem[]
+  byPractice: PracticeBreakdownItem[]
+  dailyTrend: DailyTrendItem[]
+  clinicianBreakdown: ClinicianBreakdownItem[]
+  recentLogs: RecentLogItem[]
+  dataCompleteness: DataCompletenessRow[]
+}> {
+  await getProfile()
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  const expected = countWeekdaysInclusive(startDate, endDate)
+  return {
+    summary: reportingSummaryFromRows(rows),
+    byCategory: appointmentsByCategoryFromRows(rows),
+    byPractice: appointmentsByPracticeFromRows(rows),
+    dailyTrend: dailyTrendFromRows(rows),
+    clinicianBreakdown: clinicianBreakdownFromRows(rows),
+    recentLogs: recentLogsFromRows(rows, 10),
+    dataCompleteness: dataCompletenessFromRows(rows, startDate, endDate, expected),
+  }
+}
+
+export async function getReportingSummary(
+  startDate: string,
+  endDate: string,
+  practiceScope?: ReportingPracticeScope,
+): Promise<ReportingSummary> {
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  return reportingSummaryFromRows(rows)
+}
+
+export async function getAppointmentsByCategory(
+  startDate: string,
+  endDate: string,
+  practiceScope?: ReportingPracticeScope,
+): Promise<CategoryBreakdownItem[]> {
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  return appointmentsByCategoryFromRows(rows)
+}
+
+export async function getAppointmentsByPractice(
+  startDate: string,
+  endDate: string,
+  practiceScope?: ReportingPracticeScope,
+): Promise<PracticeBreakdownItem[]> {
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  return appointmentsByPracticeFromRows(rows)
+}
+
+export async function getDailyTrend(
+  startDate: string,
+  endDate: string,
+  practiceScope?: ReportingPracticeScope,
+): Promise<DailyTrendItem[]> {
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  return dailyTrendFromRows(rows)
+}
+
+export async function getClinicianBreakdown(
+  startDate: string,
+  endDate: string,
+  practiceScope?: ReportingPracticeScope,
+): Promise<ClinicianBreakdownItem[]> {
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  return clinicianBreakdownFromRows(rows)
 }
 
 export async function getRecentLogs(

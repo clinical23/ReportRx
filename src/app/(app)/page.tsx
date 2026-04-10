@@ -37,7 +37,10 @@ import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Dashboard" };
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Your personal activity snapshot, recent logs, and quick links for ReportRx.",
+};
 
 function StatTile({
   label,

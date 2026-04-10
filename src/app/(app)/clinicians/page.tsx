@@ -6,7 +6,10 @@ import { listOrganisationTeamMembers } from "@/lib/supabase/data";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Team" };
+export const metadata: Metadata = {
+  title: "Team",
+  description: "Directory of clinicians and team members in your organisation.",
+};
 
 export default async function CliniciansPage() {
   const profile = await getProfile();

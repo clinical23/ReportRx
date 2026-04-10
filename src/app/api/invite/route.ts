@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { getPublicSiteUrl } from '@/lib/site-url'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
@@ -17,9 +18,7 @@ function isValidEmail(email: string): boolean {
 }
 
 function inviteRedirectUrl(): string {
-  const base =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
-    'https://reportrx.vercel.app'
+  const base = getPublicSiteUrl()
   const next = encodeURIComponent('/onboarding')
   return `${base}/auth/callback?next=${next}`
 }

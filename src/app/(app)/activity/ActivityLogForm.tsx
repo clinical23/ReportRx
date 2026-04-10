@@ -90,6 +90,7 @@ function CategoryStepperRow({
           inputMode="numeric"
           value={display}
           placeholder="0"
+          aria-label={`Appointment count for ${cat.name}`}
           onChange={(e) => onCountChange(map, setMap, cat.id, e.target.value)}
           className={countInputClass}
         />

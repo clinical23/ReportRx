@@ -19,7 +19,10 @@ import { Users } from "lucide-react";
 import type { Metadata } from "next";
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = { title: "Admin" };
+export const metadata: Metadata = {
+  title: "Admin",
+  description: "Organisations, PCNs, practices, team roles, assignments, and user invitations.",
+};
 
 const roleBadgeClasses: Record<string, string> = {
   clinician: 'bg-slate-100 text-slate-700 border border-slate-200',

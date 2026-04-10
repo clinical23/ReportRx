@@ -1,21 +1,19 @@
 import { getProfile } from '@/lib/supabase/auth'
 import {
-  getAppointmentsByCategory,
-  getAppointmentsByPractice,
-  getClinicianBreakdown,
-  getDailyTrend,
-  getDataCompleteness,
-  getRecentLogs,
-  getReportingSummary,
   listReportingPcns,
   listReportingPractices,
+  loadReportingDashboardData,
   resolveReportingPracticeScope,
 } from '@/lib/supabase/reporting'
 import { ReportingDashboardClient } from './reporting-dashboard-client'
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Reporting" };
+export const metadata: Metadata = {
+  title: "Reporting",
+  description:
+    "Charts and tables for appointments, hours, and activity completeness across your organisation.",
+};
 
 export default async function ReportingPage({
   searchParams,
@@ -51,7 +49,7 @@ export default async function ReportingPage({
     practiceParam,
   )
 
-  const [
+  const {
     summary,
     byCategory,
     byPractice,
@@ -59,19 +57,7 @@ export default async function ReportingPage({
     clinicianBreakdown,
     recentLogs,
     dataCompleteness,
-  ] = await Promise.all([
-    getReportingSummary(safeStart, safeEnd, practiceScope),
-    getAppointmentsByCategory(safeStart, safeEnd, practiceScope),
-    getAppointmentsByPractice(safeStart, safeEnd, practiceScope),
-    getDailyTrend(safeStart, safeEnd, practiceScope),
-    getClinicianBreakdown(safeStart, safeEnd, practiceScope),
-    getRecentLogs(10, {
-      practiceScope,
-      startDate: safeStart,
-      endDate: safeEnd,
-    }),
-    getDataCompleteness(safeStart, safeEnd, practiceScope),
-  ])
+  } = await loadReportingDashboardData(safeStart, safeEnd, practiceScope)
 
   return (
     <ReportingDashboardClient

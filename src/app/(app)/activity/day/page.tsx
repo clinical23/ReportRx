@@ -14,8 +14,14 @@ import { getDailyBreakdown } from "@/lib/supabase/activity";
 import { getAuthProfile, isAppRole } from "@/lib/supabase/auth-profile";
 import { getPracticeScopeIdsForSession } from "@/lib/supabase/practice-scope";
 import { cn } from "@/lib/utils";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Day detail",
+  description: "Appointment breakdown for a single day of activity.",
+};
 
 type Props = {
   searchParams: Promise<{ date?: string }>;

@@ -23,7 +23,10 @@ import RecentLogs from './RecentLogs'
 import type { Metadata } from "next";
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = { title: "Activity" };
+export const metadata: Metadata = {
+  title: "Activity",
+  description: "Log daily appointments by category and practice, and review recent activity.",
+};
 
 export default async function ActivityPage() {
   try {
