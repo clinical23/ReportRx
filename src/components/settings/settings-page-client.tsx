@@ -19,6 +19,7 @@ import {
   updateProfile,
 } from "@/app/actions/settings";
 import { AuditPageView } from "@/components/audit/AuditPageView";
+import { MfaSettingsSection } from "@/components/settings/mfa-settings-section";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -230,6 +231,8 @@ export function SettingsPageClient({
           Manage your organisation, practices and activity categories.
         </p>
       </div>
+
+      <MfaSettingsSection />
 
       <Card>
         <CardHeader>

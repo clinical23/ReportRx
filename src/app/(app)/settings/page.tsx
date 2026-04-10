@@ -8,6 +8,9 @@ import {
 } from "@/lib/report/org";
 import type { Metadata } from "next";
 
+// TODO: When organisations.mfa_required is true, force MFA enrolment for all users in that org
+// For now, MFA is optional — users can enable it in Settings
+
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Settings",

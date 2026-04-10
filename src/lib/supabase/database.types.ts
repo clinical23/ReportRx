@@ -326,6 +326,30 @@ export interface Database {
         };
         Relationships: [];
       };
+      organisations: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string | null;
+          settings: Json | null;
+          /** When true, org-wide MFA enforcement (not enforced in app yet — see middleware TODO). */
+          mfa_required: boolean;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug?: string | null;
+          settings?: Json | null;
+          mfa_required?: boolean;
+        };
+        Update: {
+          name?: string;
+          slug?: string | null;
+          settings?: Json | null;
+          mfa_required?: boolean;
+        };
+        Relationships: [];
+      };
       practices: {
         Row: {
           id: string;

@@ -77,6 +77,22 @@ export async function updateSession(request: NextRequest) {
       url.pathname = '/onboarding'
       return NextResponse.redirect(url)
     }
+
+    // TODO: When organisations.mfa_required is true, force MFA enrolment for all users in that org
+    // For now, MFA is optional — users can enable it in Settings
+    const path = request.nextUrl.pathname
+    if (!path.startsWith('/mfa-verify') && !path.startsWith('/api/')) {
+      const { data: aalData } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      if (
+        aalData?.nextLevel === 'aal2' &&
+        aalData?.currentLevel === 'aal1'
+      ) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/mfa-verify'
+        return NextResponse.redirect(url)
+      }
+    }
   }
 
   return supabaseResponse
