@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { ClipboardList } from "lucide-react";
+import { useToast } from "@/components/ui/toast-provider";
 
 import { editActivityLog } from '@/app/actions/activity'
 import {
@@ -72,6 +73,7 @@ export default function RecentLogs({
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [isPending, startTransition] = useTransition()
+  const toast = useToast()
 
   const activeEditLog = useMemo(
     () => logs.find((l) => l.log_id === editingLogId) ?? null,
@@ -136,9 +138,11 @@ export default function RecentLogs({
       })
       if (!result.success) {
         setMessage({ type: 'error', text: result.error })
+        toast.error(result.error)
         return
       }
-      setMessage({ type: 'success', text: 'Log updated successfully.' })
+      setMessage({ type: 'success', text: 'Log updated successfully' })
+      toast.success('Log updated successfully')
       setEditingLogId(null)
       router.refresh()
     })

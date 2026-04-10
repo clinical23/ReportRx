@@ -26,6 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useToast } from "@/components/ui/toast-provider";
 import { formatRoleLabel } from "@/lib/role-format";
 import type { ActivityCategorySettingsRow } from "@/lib/supabase/activity";
 import type { Profile } from "@/lib/supabase/auth";
@@ -71,6 +72,7 @@ export function SettingsPageClient({
   categories: initialCategories,
 }: Props) {
   const router = useRouter();
+  const toast = useToast();
   const [pending, startTransition] = useTransition();
   const [profileFlash, setProfileFlash] = useState<{ message: string; ok: boolean } | null>(null);
   const [orgFlash, setOrgFlash] = useState<{ message: string; ok: boolean } | null>(null);
@@ -113,6 +115,8 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await updateProfile(fd);
       setProfileFlash(r.success ? { message: "Profile saved.", ok: true } : { message: r.error, ok: false });
+      if (r.success) toast.success("Profile saved.");
+      else toast.error(r.error);
       if (r.success) router.refresh();
     });
   };
@@ -133,6 +137,8 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await updateOrganisation(fd);
       setOrgFlash(r.success ? { message: "Settings saved", ok: true } : { message: r.error, ok: false });
+      if (r.success) toast.success("Settings saved");
+      else toast.error(r.error);
       if (r.success) router.refresh();
     });
   };
@@ -147,9 +153,11 @@ export function SettingsPageClient({
       if (r.success) {
         setNewCatName("");
         setCatFlash({ message: "Categories updated", ok: true });
+        toast.success("Categories updated");
         router.refresh();
       } else {
         setCatFlash({ message: r.error, ok: false });
+        toast.error(r.error);
       }
     });
   };
@@ -162,6 +170,8 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await updateCategory(fd);
       setCatFlash(r.success ? { message: "Categories updated", ok: true } : { message: r.error, ok: false });
+      if (r.success) toast.success("Categories updated");
+      else toast.error(r.error);
       if (r.success) router.refresh();
     });
   };
@@ -173,6 +183,8 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await archiveCategory(fd);
       setCatFlash(r.success ? { message: "Categories updated", ok: true } : { message: r.error, ok: false });
+      if (r.success) toast.success("Categories updated");
+      else toast.error(r.error);
       if (r.success) router.refresh();
     });
   };
@@ -184,6 +196,8 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await unarchiveCategory(fd);
       setCatFlash(r.success ? { message: "Categories updated", ok: true } : { message: r.error, ok: false });
+      if (r.success) toast.success("Categories updated");
+      else toast.error(r.error);
       if (r.success) router.refresh();
     });
   };
@@ -197,8 +211,10 @@ export function SettingsPageClient({
       const r = await reorderCategory(fd);
       if (!r.success) {
         setCatFlash({ message: r.error, ok: false });
+        toast.error(r.error);
       } else {
         setCatFlash({ message: "Categories updated", ok: true });
+        toast.success("Categories updated");
         router.refresh();
       }
     });

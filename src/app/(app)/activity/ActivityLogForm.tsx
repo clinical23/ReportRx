@@ -9,6 +9,7 @@ import {
   saveActivityLog,
 } from "@/app/actions/activity";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast-provider";
 import type { ActivityCategory } from "@/lib/supabase/activity";
 import type { ClinicianListItem } from "@/lib/supabase/data";
 import { todayISOInLondon } from "@/lib/datetime";
@@ -162,6 +163,7 @@ export default function ActivityLogForm({
     text: string;
   } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const toast = useToast();
 
   const clinicianLocked = variant === "clinician";
   const canSaveSingle =
@@ -195,10 +197,13 @@ export default function ActivityLogForm({
       setMessage(null);
       const cid = clinicianLocked ? (clinicianRecordId ?? "") : clinicianId;
       if (!cid) {
+        const text =
+          "Your account is not linked to a clinician record (profiles.clinician_id). Contact an administrator.";
         setMessage({
           type: "error",
-          text: "Your account is not linked to a clinician record (profiles.clinician_id). Contact an administrator.",
+          text,
         });
+        toast.error(text);
         return;
       }
       const result = await saveActivityLog({
@@ -215,9 +220,11 @@ export default function ActivityLogForm({
           type: "success",
           text: `Activity saved for ${logDate} at ${practiceName}`,
         });
+        toast.success(`Activity saved for ${logDate} at ${practiceName}`);
         setCounts({});
       } else {
         setMessage({ type: "error", text: result.error });
+        toast.error(result.error);
       }
     });
   }
@@ -233,14 +240,17 @@ export default function ActivityLogForm({
         entries: buildEntries(bulkCounts),
       });
       if (result.success) {
+        const text = `Saved logs for ${result.count} clinician(s).`;
         setMessage({
           type: "success",
-          text: `Saved logs for ${result.count} clinician(s).`,
+          text,
         });
+        toast.success(text);
         setBulkCounts({});
         setBulkClinicianIds([]);
       } else {
         setMessage({ type: "error", text: result.error });
+        toast.error(result.error);
       }
     });
   }
@@ -249,13 +259,16 @@ export default function ActivityLogForm({
     startTransition(async () => {
       setMessage(null);
       if (!practiceId) {
-        setMessage({ type: "error", text: "Please select a practice first." });
+        const text = "Please select a practice first.";
+        setMessage({ type: "error", text });
+        toast.error(text);
         return;
       }
 
       const result = await getPreviousDayLog(practiceId);
       if (!result.success) {
         setMessage({ type: "error", text: result.error });
+        toast.error(result.error);
         return;
       }
 
@@ -272,6 +285,7 @@ export default function ActivityLogForm({
         type: "success",
         text: `Copied from ${result.log_date}.`,
       });
+      toast.success(`Copied from ${result.log_date}.`);
     });
   }
 
@@ -290,10 +304,12 @@ export default function ActivityLogForm({
         setNewCatName("");
         setShowNewCat(false);
       } else {
+        const text = result.error ?? "Failed to add category.";
         setMessage({
           type: "error",
-          text: result.error ?? "Failed to add category.",
+          text,
         });
+        toast.error(text);
       }
     });
   }

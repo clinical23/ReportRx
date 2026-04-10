@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/ui/toast-provider";
 
 type Props = {
   organisationId: string;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function AdminInviteForm({ organisationId, allowAdminRole }: Props) {
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [pending, setPending] = useState(false);
@@ -43,19 +45,26 @@ export function AdminInviteForm({ organisationId, allowAdminRole }: Props) {
       };
 
       if (!res.ok) {
-        setError(data.error ?? "Invite failed");
+        const text = data.error ?? "Invite failed";
+        setError(text);
+        toast.error(text);
         setPending(false);
         return;
       }
 
       if (data.warning) {
         setWarning(data.warning);
+        toast.error(data.warning);
       }
-      setMessage(data.message ?? "Invitation email sent.");
+      const okMessage = data.message ?? "Invitation email sent.";
+      setMessage(okMessage);
+      toast.success(okMessage);
       setEmail("");
       setRole("");
     } catch {
-      setError("Network error — try again.");
+      const text = "Network error — try again.";
+      setError(text);
+      toast.error(text);
     }
     setPending(false);
   }
