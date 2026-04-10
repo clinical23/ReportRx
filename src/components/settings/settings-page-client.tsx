@@ -19,6 +19,7 @@ import {
   updateProfile,
 } from "@/app/actions/settings";
 import { AuditPageView } from "@/components/audit/AuditPageView";
+import { DsarExportCard } from "@/components/settings/dsar-export-card";
 import { MfaSettingsSection } from "@/components/settings/mfa-settings-section";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +46,7 @@ type Props = {
   defaultWeeklyHours: number;
   isOrgAdmin: boolean;
   categories: ActivityCategorySettingsRow[];
+  lastDsarExportAt: string | null;
 };
 
 function roleBadgeClass(role: string): string {
@@ -72,6 +74,7 @@ export function SettingsPageClient({
   defaultWeeklyHours,
   isOrgAdmin,
   categories: initialCategories,
+  lastDsarExportAt,
 }: Props) {
   const router = useRouter();
   const toast = useToast();
@@ -233,6 +236,8 @@ export function SettingsPageClient({
       </div>
 
       <MfaSettingsSection />
+
+      <DsarExportCard lastExportAt={lastDsarExportAt} />
 
       <Card>
         <CardHeader>

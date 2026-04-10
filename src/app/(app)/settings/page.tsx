@@ -1,4 +1,5 @@
 import { SettingsPageClient } from "@/components/settings/settings-page-client";
+import { getLastDsarSelfExportAt } from "@/lib/dsar/last-export";
 import { getProfile } from "@/lib/supabase/auth";
 import { listActivityCategoriesForSettings } from "@/lib/supabase/activity";
 import {
@@ -20,9 +21,10 @@ export const metadata: Metadata = {
 export default async function SettingsPage() {
   const profile = await getProfile();
 
-  const [orgRecord, categories] = await Promise.all([
+  const [orgRecord, categories, lastDsarExportAt] = await Promise.all([
     getOrganisationSettingsRecord(profile.organisation_id),
     listActivityCategoriesForSettings(),
+    getLastDsarSelfExportAt(profile.id),
   ]);
 
   const organisationName = orgRecord?.name?.trim() || "Organisation";
@@ -41,6 +43,7 @@ export default async function SettingsPage() {
       defaultWeeklyHours={defaultWeeklyHours}
       isOrgAdmin={isOrgAdmin}
       categories={categories}
+      lastDsarExportAt={lastDsarExportAt}
     />
   );
 }

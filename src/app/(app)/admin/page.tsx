@@ -7,6 +7,7 @@ import {
 } from '@/app/actions/admin'
 import { AuditLogViewer } from '@/components/audit/AuditLogViewer'
 import { AuditPageView } from '@/components/audit/AuditPageView'
+import { AdminExportUserData } from '@/components/admin/admin-export-user-data'
 import { AdminBulkInviteForm } from '@/components/admin/admin-bulk-invite-form'
 import { AdminInviteForm } from '@/components/admin/admin-invite-form'
 import { AdminPracticeAssignments } from '@/components/admin/admin-practice-assignments'
@@ -244,6 +245,9 @@ export default async function AdminPage({
                   <th className="px-4 py-2.5 font-medium">Status</th>
                   <th className="px-4 py-2.5 font-medium">Access</th>
                   <th className="px-4 py-2.5 font-medium">Update Role</th>
+                  {profile.role === 'superadmin' ? (
+                    <th className="px-4 py-2.5 font-medium w-12"> </th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -315,6 +319,14 @@ export default async function AdminPage({
                       </button>
                     </form>
                   </td>
+                  {profile.role === 'superadmin' ? (
+                    <td className="px-4 py-2.5">
+                      <AdminExportUserData
+                        userId={member.id}
+                        memberName={member.full_name || member.email || member.id}
+                      />
+                    </td>
+                  ) : null}
                 </tr>
                 ))}
               </tbody>

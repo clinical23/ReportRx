@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
-type ToastType = "success" | "error";
+type ToastType = "success" | "error" | "warning";
 
 type ToastItem = {
   id: string;
@@ -15,6 +15,7 @@ type ToastContextValue = {
   showToast: (type: ToastType, message: string) => void;
   success: (message: string) => void;
   error: (message: string) => void;
+  warning: (message: string) => void;
 };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -35,6 +36,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       showToast,
       success: (message: string) => showToast("success", message),
       error: (message: string) => showToast("error", message),
+      warning: (message: string) => showToast("warning", message),
     }),
     [showToast],
   );
@@ -51,7 +53,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               "pointer-events-auto rounded-xl border px-4 py-3 text-sm shadow-sm",
               toast.type === "success"
                 ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                : "border-red-200 bg-red-50 text-red-900",
+                : toast.type === "warning"
+                  ? "border-amber-200 bg-amber-50 text-amber-950"
+                  : "border-red-200 bg-red-50 text-red-900",
             )}
           >
             {toast.message}
