@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { AuditPageView } from "@/components/audit/AuditPageView";
 import { PersonalCategoryChart } from "@/components/dashboard/personal-category-chart";
 import {
   Card,
@@ -178,6 +179,7 @@ export default async function DashboardPage() {
 
     return (
       <div className="mx-auto min-w-0 max-w-6xl space-y-8">
+        <AuditPageView resourceType="dashboard" />
         <div className="relative w-full overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-teal-50 via-white to-gray-50/80 p-4 shadow-sm sm:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-2xl">
@@ -355,6 +357,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto min-w-0 max-w-6xl space-y-8">
+      <AuditPageView resourceType="dashboard" />
       <div className="relative w-full overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-teal-50 via-white to-gray-50/80 p-4 shadow-sm sm:p-8">
         <div className="max-w-2xl">
           <h1 className="text-2xl font-semibold text-gray-900 sm:text-3xl">

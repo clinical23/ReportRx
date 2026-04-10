@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { logAudit } from '@/lib/audit'
 import { getProfile } from '@/lib/supabase/auth'
 import { getAssignedPracticeIdsForProfileWithClient } from '@/lib/supabase/clinician-practice-assignments'
 import { createClient } from '@/lib/supabase/server'
@@ -128,6 +129,13 @@ export async function saveActivityLog(input: SaveActivityLogInput): Promise<Save
   revalidatePath('/activity')
   revalidatePath('/')
   revalidatePath('/reporting')
+  logAudit({
+    supabase,
+    action: 'create',
+    resourceType: 'activity_log',
+    resourceId: log_id,
+    metadata: { practiceId: input.practice_id, date: input.log_date },
+  })
   return { success: true, log_id }
 }
 
@@ -362,6 +370,13 @@ export async function editActivityLog(
   revalidatePath('/activity/day')
   revalidatePath('/')
   revalidatePath('/reporting')
+  logAudit({
+    supabase,
+    action: 'edit',
+    resourceType: 'activity_log',
+    resourceId: logId,
+    ...(reason ? { metadata: { reason } } : {}),
+  })
   return { success: true, log_id: logId }
 }
 
@@ -470,6 +485,16 @@ export async function bulkSaveActivityLogs(
   revalidatePath('/activity/day')
   revalidatePath('/')
   revalidatePath('/reporting')
+  logAudit({
+    supabase,
+    action: 'create',
+    resourceType: 'activity_log',
+    metadata: {
+      practiceId: input.practice_id,
+      date: input.log_date,
+      count: clinicianIds.length,
+    },
+  })
   return { success: true, count: clinicianIds.length }
 }
 

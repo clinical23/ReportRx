@@ -14,6 +14,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts'
+import { AuditPageView } from '@/components/audit/AuditPageView'
 import type {
   CategoryBreakdownItem,
   ClinicianBreakdownItem,
@@ -282,6 +283,15 @@ export function ReportingDashboardClient({
 
   return (
     <div className="space-y-6">
+      <AuditPageView
+        resourceType="reporting"
+        viewKey={reportQueryString}
+        metadata={{
+          dateRange: { from: startDate, to: endDate },
+          pcnId: selectedPcnId,
+          practiceId: selectedPracticeId,
+        }}
+      />
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">Reporting</h1>
         <p className="text-sm text-gray-500">

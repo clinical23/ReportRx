@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
+import { logAudit } from '@/lib/audit'
 import { requireRole } from '@/lib/supabase/auth'
 import { createClient } from '@/lib/supabase/server'
 
@@ -145,6 +146,15 @@ export async function setProfileActive(formData: FormData): Promise<void> {
 
   if (error) redirectAdminError(error.message)
 
+  if (!makeActive) {
+    logAudit({
+      supabase,
+      action: 'deactivate',
+      resourceType: 'admin',
+      resourceId: userId,
+    })
+  }
+
   revalidatePath('/admin')
   revalidatePath('/clinicians')
 }
@@ -235,6 +245,14 @@ export async function syncClinicianPracticeAssignments(
       return { success: false, error: insErr.message }
     }
   }
+
+  logAudit({
+    supabase,
+    action: 'edit',
+    resourceType: 'practice_assignment',
+    resourceId: trimmedClinician,
+    metadata: { practiceIds: uniquePracticeIds },
+  })
 
   revalidatePath('/admin')
   revalidatePath('/activity')

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { logAudit } from "@/lib/audit";
 import { getProfile, type Profile } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -37,6 +38,13 @@ export async function updateProfile(
     console.error("[updateProfile]", error.message);
     return { success: false, error: "Could not update profile." };
   }
+
+  logAudit({
+    supabase,
+    action: "edit",
+    resourceType: "settings",
+    metadata: { fieldsChanged: ["full_name"] },
+  });
 
   revalidatePath("/settings");
   revalidatePath("/");
@@ -74,7 +82,7 @@ export async function updateOrganisation(
   const supabase = await createClient();
   const { data: orgRow, error: fetchErr } = await supabase
     .from("organisations")
-    .select("settings")
+    .select("name, settings")
     .eq("id", profile.organisation_id)
     .maybeSingle();
 
@@ -98,6 +106,23 @@ export async function updateOrganisation(
     default_weekly_hours: round3(parsedWeekly),
   };
 
+  const prevName =
+    orgRow && typeof (orgRow as { name?: unknown }).name === "string"
+      ? String((orgRow as { name: string }).name)
+      : "";
+  const prevDaily =
+    typeof prevSettings.default_daily_hours === "number"
+      ? round3(prevSettings.default_daily_hours)
+      : null;
+  const prevWeekly =
+    typeof prevSettings.default_weekly_hours === "number"
+      ? round3(prevSettings.default_weekly_hours)
+      : null;
+  const fieldsChanged: string[] = [];
+  if (prevName !== name) fieldsChanged.push("name");
+  if (prevDaily !== settings.default_daily_hours) fieldsChanged.push("default_daily_hours");
+  if (prevWeekly !== settings.default_weekly_hours) fieldsChanged.push("default_weekly_hours");
+
   const { error } = await supabase
     .from("organisations")
     .update({ name, settings })
@@ -106,6 +131,15 @@ export async function updateOrganisation(
   if (error) {
     console.error("[updateOrganisation]", error.message);
     return { success: false, error: "Could not update organisation." };
+  }
+
+  if (fieldsChanged.length > 0) {
+    logAudit({
+      supabase,
+      action: "edit",
+      resourceType: "settings",
+      metadata: { fieldsChanged },
+    });
   }
 
   revalidatePath("/settings");
@@ -151,6 +185,13 @@ export async function createCategory(
     return { success: false, error: "Could not create category." };
   }
 
+  logAudit({
+    supabase,
+    action: "edit",
+    resourceType: "settings",
+    metadata: { fieldsChanged: ["category_create"] },
+  });
+
   revalidatePath("/settings");
   revalidatePath("/activity");
   revalidatePath("/reporting");
@@ -182,6 +223,13 @@ export async function updateCategory(
     return { success: false, error: "Could not update category." };
   }
 
+  logAudit({
+    supabase,
+    action: "edit",
+    resourceType: "settings",
+    metadata: { fieldsChanged: ["category_update"] },
+  });
+
   revalidatePath("/settings");
   revalidatePath("/activity");
   revalidatePath("/reporting");
@@ -209,6 +257,13 @@ export async function archiveCategory(
     return { success: false, error: "Could not archive category." };
   }
 
+  logAudit({
+    supabase,
+    action: "edit",
+    resourceType: "settings",
+    metadata: { fieldsChanged: ["category_archive"] },
+  });
+
   revalidatePath("/settings");
   revalidatePath("/activity");
   revalidatePath("/reporting");
@@ -235,6 +290,13 @@ export async function unarchiveCategory(
     console.error("[unarchiveCategory]", error.message);
     return { success: false, error: "Could not restore category." };
   }
+
+  logAudit({
+    supabase,
+    action: "edit",
+    resourceType: "settings",
+    metadata: { fieldsChanged: ["category_unarchive"] },
+  });
 
   revalidatePath("/settings");
   revalidatePath("/activity");
@@ -301,6 +363,13 @@ export async function reorderCategory(
     console.error("[reorderCategory] b", e2.message);
     return { success: false, error: "Could not reorder." };
   }
+
+  logAudit({
+    supabase,
+    action: "edit",
+    resourceType: "settings",
+    metadata: { fieldsChanged: ["category_reorder"] },
+  });
 
   revalidatePath("/settings");
   revalidatePath("/activity");

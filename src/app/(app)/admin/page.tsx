@@ -5,6 +5,8 @@ import {
   createPractice,
   setProfileActive,
 } from '@/app/actions/admin'
+import { AuditLogViewer } from '@/components/audit/AuditLogViewer'
+import { AuditPageView } from '@/components/audit/AuditPageView'
 import { AdminBulkInviteForm } from '@/components/admin/admin-bulk-invite-form'
 import { AdminInviteForm } from '@/components/admin/admin-invite-form'
 import { AdminPracticeAssignments } from '@/components/admin/admin-practice-assignments'
@@ -63,6 +65,7 @@ export default async function AdminPage({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
+      <AuditPageView resourceType="admin" />
       {actionError ? (
         <div
           className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
@@ -360,6 +363,8 @@ export default async function AdminPage({
           existingOrgEmails={existingOrgEmails}
         />
       </section>
+
+      <AuditLogViewer organisationId={currentOrgId} />
     </div>
   )
 }

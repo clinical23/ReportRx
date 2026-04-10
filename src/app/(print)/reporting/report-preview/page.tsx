@@ -1,5 +1,10 @@
+import { logAudit } from "@/lib/audit";
 import { buildMonthlyReportInnerHtml } from "@/lib/report/monthly-report-html-string";
-import { loadMonthlyReportViewProps } from "@/lib/report/load-monthly-report";
+import {
+  loadMonthlyReportViewProps,
+  resolveReportDateRange,
+} from "@/lib/report/load-monthly-report";
+import { createClient } from "@/lib/supabase/server";
 
 import { ReportPrintToolbar } from "./print-toolbar";
 
@@ -12,6 +17,19 @@ export default async function ReportPreviewPage({
 }) {
   const sp = await searchParams;
   const props = await loadMonthlyReportViewProps(sp);
+  const { safeStart, safeEnd } = resolveReportDateRange(sp);
+  const supabase = await createClient();
+  logAudit({
+    supabase,
+    action: "export",
+    resourceType: "reporting",
+    metadata: {
+      format: "pdf",
+      dateRange: { from: safeStart, to: safeEnd },
+      pcnId: sp.pcn?.trim() || undefined,
+      practiceId: sp.practice?.trim() || undefined,
+    },
+  });
   const innerHtml = buildMonthlyReportInnerHtml(props);
 
   return (

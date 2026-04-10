@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { logAudit } from '@/lib/audit'
 import { getPublicSiteUrl } from '@/lib/site-url'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
@@ -21,6 +22,19 @@ function inviteRedirectUrl(): string {
   const base = getPublicSiteUrl()
   const next = encodeURIComponent('/onboarding')
   return `${base}/auth/callback?next=${next}`
+}
+
+function requestClientMeta(request: Request): {
+  ipAddress: string | null
+  userAgent: string | null
+} {
+  const xf = request.headers.get('x-forwarded-for')
+  const ip =
+    xf?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || null
+  return {
+    ipAddress: ip,
+    userAgent: request.headers.get('user-agent'),
+  }
 }
 
 export async function POST(request: Request) {
@@ -175,6 +189,15 @@ export async function POST(request: Request) {
 
     if (inviteRowError) {
       console.error('[api/invite] organisation_invites', inviteRowError)
+      const meta = requestClientMeta(request)
+      logAudit({
+        supabase,
+        action: 'invite',
+        resourceType: 'admin',
+        metadata: { invitedEmail: email, role },
+        ipAddress: meta.ipAddress,
+        userAgent: meta.userAgent,
+      })
       return NextResponse.json(
         {
           success: true,
@@ -185,6 +208,16 @@ export async function POST(request: Request) {
         { status: 200 },
       )
     }
+
+    const meta = requestClientMeta(request)
+    logAudit({
+      supabase,
+      action: 'invite',
+      resourceType: 'admin',
+      metadata: { invitedEmail: email, role },
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
+    })
 
     return NextResponse.json(
       {

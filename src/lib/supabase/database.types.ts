@@ -240,23 +240,35 @@ export interface Database {
       profiles: {
         Row: {
           id: string;
+          organisation_id: string;
           role: string;
           full_name: string;
+          email: string | null;
+          is_active: boolean;
           practice_id: string | null;
           clinician_id: string | null;
+          updated_at?: string | null;
         };
         Insert: {
           id: string;
+          organisation_id: string;
           role: string;
           full_name: string;
+          email?: string | null;
+          is_active?: boolean;
           practice_id?: string | null;
           clinician_id?: string | null;
+          updated_at?: string | null;
         };
         Update: {
+          organisation_id?: string;
           role?: string;
           full_name?: string;
+          email?: string | null;
+          is_active?: boolean;
           practice_id?: string | null;
           clinician_id?: string | null;
+          updated_at?: string | null;
         };
         Relationships: [
           {
@@ -274,6 +286,45 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      audit_logs: {
+        Row: {
+          id: string;
+          organisation_id: string;
+          user_id: string;
+          action: string;
+          resource_type: string;
+          resource_id: string | null;
+          metadata: Json | null;
+          ip_address: string | null;
+          user_agent: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organisation_id: string;
+          user_id: string;
+          action: string;
+          resource_type: string;
+          resource_id?: string | null;
+          metadata?: Json | null;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organisation_id?: string;
+          user_id?: string;
+          action?: string;
+          resource_type?: string;
+          resource_id?: string | null;
+          metadata?: Json | null;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       practices: {
         Row: {
