@@ -4,6 +4,7 @@ import {
   createPCN,
   createPractice,
 } from '@/app/actions/admin'
+import { AdminBulkInviteForm } from '@/components/admin/admin-bulk-invite-form'
 import { AdminInviteForm } from '@/components/admin/admin-invite-form'
 import { AdminPracticeAssignments } from '@/components/admin/admin-practice-assignments'
 import { requireRole } from '@/lib/supabase/auth'
@@ -51,6 +52,10 @@ export default async function AdminPage({
       full_name: m.full_name,
       email: m.email,
     }))
+
+  const existingOrgEmails = teamMembers
+    .map((m) => String(m.email ?? '').trim().toLowerCase())
+    .filter(Boolean)
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -310,6 +315,19 @@ export default async function AdminPage({
         <AdminInviteForm
           organisationId={currentOrgId}
           allowAdminRole={profile.role === 'superadmin'}
+        />
+      </section>
+
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">Bulk invite</h2>
+        <p className="mb-4 text-sm text-gray-500">
+          Paste many addresses at once. Invites are sent one at a time with a short pause
+          between each.
+        </p>
+        <AdminBulkInviteForm
+          organisationId={currentOrgId}
+          allowAdminRole={profile.role === 'superadmin'}
+          existingOrgEmails={existingOrgEmails}
         />
       </section>
     </div>

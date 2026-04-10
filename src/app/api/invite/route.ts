@@ -9,6 +9,13 @@ type InviteBody = {
   organisation_id?: string
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function isValidEmail(email: string): boolean {
+  const s = email.trim().toLowerCase()
+  return s.length > 0 && s.length <= 320 && EMAIL_RE.test(s)
+}
+
 function inviteRedirectUrl(): string {
   const base =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
@@ -44,6 +51,10 @@ export async function POST(request: Request) {
         { error: 'email, role, and organisation_id are required' },
         { status: 400 },
       )
+    }
+
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
     }
 
     const supabase = await createClient()
@@ -123,7 +134,7 @@ export async function POST(request: Request) {
       console.error('[api/invite] inviteUserByEmail', inviteError)
       return NextResponse.json(
         { error: inviteError?.message ?? 'Failed to send invite email' },
-        { status: 400 },
+        { status: 500 },
       )
     }
 
@@ -171,14 +182,17 @@ export async function POST(request: Request) {
             'Invite was sent, but the invite record could not be saved: ' +
             inviteRowError.message,
         },
-        { status: 201 },
+        { status: 200 },
       )
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Invitation email sent.',
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Invitation email sent.',
+      },
+      { status: 200 },
+    )
   } catch (e) {
     console.error('[api/invite]', e)
     return NextResponse.json({ error: 'Unexpected server error' }, { status: 500 })
