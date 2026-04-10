@@ -1,4 +1,5 @@
 import type { User } from "@supabase/supabase-js";
+import { redirect } from "next/navigation";
 
 import type { Database } from "./database.types";
 import { createClient } from "./server";
@@ -37,6 +38,11 @@ export async function getAuthProfile(): Promise<AuthSession | null> {
     .select("*")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (profile && profile.is_active === false) {
+    await supabase.auth.signOut();
+    redirect("/login?deactivated=1");
+  }
 
   return { user, profile: profile ?? null };
 }

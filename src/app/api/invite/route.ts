@@ -145,6 +145,7 @@ export async function POST(request: Request) {
       organisation_id: organisationId,
       role,
       full_name: '',
+      is_active: true,
       updated_at: new Date().toISOString(),
     }
 

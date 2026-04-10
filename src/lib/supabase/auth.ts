@@ -38,6 +38,11 @@ export async function getProfile(): Promise<Profile> {
     redirect('/login')
   }
 
+  if (profile.is_active === false) {
+    await supabase.auth.signOut()
+    redirect('/login?deactivated=1')
+  }
+
   if (!profile.organisation_id) {
     redirect('/onboarding')
   }

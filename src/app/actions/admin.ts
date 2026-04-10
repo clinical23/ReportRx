@@ -109,6 +109,46 @@ export async function changeUserRole(formData: FormData): Promise<void> {
   revalidatePath('/admin')
 }
 
+/** Activate or deactivate a team member (admin/superadmin; cannot change self). */
+export async function setProfileActive(formData: FormData): Promise<void> {
+  const profile = await requireRole('superadmin', 'admin')
+  const supabase = await createClient()
+
+  const userId = (formData.get('user_id') as string)?.trim()
+  const activeRaw = formData.get('active')
+  const makeActive = activeRaw === 'true'
+
+  if (!userId) redirectAdminError('User is required')
+
+  if (userId === profile.id) {
+    redirectAdminError('You cannot change your own access status')
+  }
+
+  const { data: target } = await supabase
+    .from('profiles')
+    .select('organisation_id')
+    .eq('id', userId)
+    .single()
+
+  if (!target || target.organisation_id !== profile.organisation_id) {
+    redirectAdminError('User not found in your organisation')
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      is_active: makeActive,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+    .eq('organisation_id', profile.organisation_id)
+
+  if (error) redirectAdminError(error.message)
+
+  revalidatePath('/admin')
+  revalidatePath('/clinicians')
+}
+
 export async function syncClinicianPracticeAssignments(
   clinicianId: string,
   practiceIds: string[],

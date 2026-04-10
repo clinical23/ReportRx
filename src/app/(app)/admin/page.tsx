@@ -3,6 +3,7 @@ import {
   createOrganisation,
   createPCN,
   createPractice,
+  setProfileActive,
 } from '@/app/actions/admin'
 import { AdminBulkInviteForm } from '@/components/admin/admin-bulk-invite-form'
 import { AdminInviteForm } from '@/components/admin/admin-invite-form'
@@ -238,6 +239,7 @@ export default async function AdminPage({
                   <th className="px-4 py-2.5 font-medium">Email</th>
                   <th className="px-4 py-2.5 font-medium">Role</th>
                   <th className="px-4 py-2.5 font-medium">Status</th>
+                  <th className="px-4 py-2.5 font-medium">Access</th>
                   <th className="px-4 py-2.5 font-medium">Update Role</th>
                 </tr>
               </thead>
@@ -265,6 +267,27 @@ export default async function AdminPage({
                     >
                       {member.is_active ? 'Active' : 'Inactive'}
                     </span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {member.id === profile.id ? (
+                      <span className="text-xs text-gray-400">—</span>
+                    ) : (
+                      <form action={setProfileActive}>
+                        <input type="hidden" name="user_id" value={member.id} />
+                        <input
+                          type="hidden"
+                          name="active"
+                          value={member.is_active ? 'false' : 'true'}
+                        />
+                        <button
+                          type="submit"
+                          disabled={profile.role !== 'superadmin' && profile.role !== 'admin'}
+                          className="min-h-9 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {member.is_active ? 'Deactivate' : 'Reactivate'}
+                        </button>
+                      </form>
+                    )}
                   </td>
                   <td className="px-4 py-2.5">
                     <form action={changeUserRole} className="flex flex-col gap-2 md:flex-row md:items-center">
@@ -295,11 +318,15 @@ export default async function AdminPage({
             </table>
           )}
         </div>
-        {profile.role !== 'superadmin' ? (
-          <p className="mt-3 text-xs text-gray-500">
-            Role changes are restricted to superadmins.
+        <div className="mt-3 space-y-1 text-xs text-gray-500">
+          {profile.role !== 'superadmin' ? (
+            <p>Role changes are restricted to superadmins.</p>
+          ) : null}
+          <p>
+            Deactivate removes sign-in access for that user until reactivated. You cannot change
+            your own access.
           </p>
-        ) : null}
+        </div>
       </section>
 
       <AdminPracticeAssignments

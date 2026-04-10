@@ -50,7 +50,7 @@ export async function updateSession(request: NextRequest) {
     console.warn('[supabase/middleware] getUser:', userError.message)
   }
 
-  const publicPaths = ['/login', '/auth/callback', '/auth/confirm']
+  const publicPaths = ['/login', '/auth/callback', '/auth/confirm', '/privacy']
   const isPublicPath = publicPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path),
   )

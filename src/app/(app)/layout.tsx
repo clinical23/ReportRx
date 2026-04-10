@@ -1,4 +1,5 @@
 import { AppLayoutClient } from "@/components/layout/app-layout-client";
+import { IdleTimeoutProvider } from "@/components/IdleTimeoutProvider";
 import { getProfile } from "@/lib/supabase/auth";
 import { getNavContext } from "@/lib/supabase/nav-context";
 import type { Metadata } from "next";
@@ -20,17 +21,19 @@ export default async function AppLayout({
   const canAccessCliniciansDirectory = profile.role !== "clinician";
 
   return (
-    <AppLayoutClient
-      canAccessAdmin={profile.role === "admin" || profile.role === "superadmin"}
-      canAccessCliniciansDirectory={canAccessCliniciansDirectory}
-      profile={{
-        full_name: profile.full_name ?? "User",
-        email: profile.email ?? "",
-        role: profile.role,
-      }}
-      practiceName={practiceName}
-    >
-      {children}
-    </AppLayoutClient>
+    <IdleTimeoutProvider>
+      <AppLayoutClient
+        canAccessAdmin={profile.role === "admin" || profile.role === "superadmin"}
+        canAccessCliniciansDirectory={canAccessCliniciansDirectory}
+        profile={{
+          full_name: profile.full_name ?? "User",
+          email: profile.email ?? "",
+          role: profile.role,
+        }}
+        practiceName={practiceName}
+      >
+        {children}
+      </AppLayoutClient>
+    </IdleTimeoutProvider>
   );
 }
