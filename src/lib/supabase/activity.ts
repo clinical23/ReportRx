@@ -27,6 +27,17 @@ type RecentLogRow = {
   appointment_count: number
 }
 
+type ActivityLogEditRow = {
+  id: string
+  activity_log_id: string
+  edited_by: string | null
+  edited_at: string
+  field_name: string
+  old_value: string | null
+  new_value: string | null
+  reason: string | null
+}
+
 export async function listPractices(): Promise<Practice[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -109,36 +120,116 @@ export async function listRecentLogsGrouped(
   limit = 10,
   practiceScopeIds: string[],
 ) {
-  const rows = await listRecentLogs(limit * 8, practiceScopeIds)
-  const map = new Map<string, {
-    log_id: string
-    log_date: string
-    hours_worked: number | null
-    clinician_name: string
-    practice_name: string
-    entries: { category_name: string; count: number }[]
-  }>()
-  for (const row of rows) {
-    if (!row.log_id) continue
-    if (!map.has(row.log_id)) {
-      map.set(row.log_id, {
-        log_id: row.log_id,
-        log_date: row.log_date,
-        hours_worked: row.hours_worked,
-        clinician_name: row.clinician_name,
-        practice_name: row.practice_name,
-        entries: [],
-      })
-    }
-    const group = map.get(row.log_id)
-    if (group) {
-      group.entries.push({
-        category_name: row.category_name,
-        count: row.appointment_count,
-      })
-    }
+  if (practiceScopeIds.length === 0) return []
+
+  const supabase = await createClient()
+  const { data: logs, error: logsError } = await supabase
+    .from('activity_logs')
+    .select('id, log_date, hours_worked, clinician_id, practice_id, submitted_by, created_at')
+    .in('practice_id', practiceScopeIds)
+    .order('log_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (logsError) {
+    console.error('[listRecentLogsGrouped.logs]', logsError.message)
+    return []
   }
-  return Array.from(map.values()).slice(0, limit)
+
+  const logIds = (logs ?? []).map((l) => String(l.id))
+  if (logIds.length === 0) return []
+  const practiceIds = [...new Set((logs ?? []).map((l) => String(l.practice_id)))]
+  const clinicianIds = [...new Set((logs ?? []).map((l) => String(l.clinician_id)))]
+
+  const [entriesRes, practicesRes, cliniciansRes, editsRes] = await Promise.all([
+    supabase
+      .from('activity_log_entries')
+      .select('log_id, category_id, count')
+      .in('log_id', logIds),
+    supabase.from('practices').select('id, name').in('id', practiceIds),
+    supabase.from('profiles').select('id, full_name').in('id', clinicianIds),
+    supabase
+      .from('activity_log_edits')
+      .select('id, activity_log_id, edited_by, edited_at, field_name, old_value, new_value, reason')
+      .in('activity_log_id', logIds)
+      .order('edited_at', { ascending: false }),
+  ])
+
+  if (entriesRes.error) {
+    console.error('[listRecentLogsGrouped.entries]', entriesRes.error.message)
+    return []
+  }
+
+  const categoryIds = [...new Set((entriesRes.data ?? []).map((e) => String(e.category_id)))]
+  const { data: categories } = categoryIds.length
+    ? await supabase.from('activity_categories').select('id, name').in('id', categoryIds)
+    : { data: [] as Array<{ id: string; name: string }> }
+
+  const editRows = (editsRes.data ?? []) as ActivityLogEditRow[]
+  const editUserIds = [...new Set(editRows.map((e) => e.edited_by).filter(Boolean) as string[])]
+  const { data: editUsers } = editUserIds.length
+    ? await supabase.from('profiles').select('id, full_name').in('id', editUserIds)
+    : { data: [] as Array<{ id: string; full_name: string | null }> }
+
+  const practiceNameById = new Map((practicesRes.data ?? []).map((p) => [String(p.id), String(p.name)]))
+  const clinicianNameById = new Map(
+    (cliniciansRes.data ?? []).map((p) => [String(p.id), String(p.full_name ?? 'Unknown clinician')]),
+  )
+  const categoryNameById = new Map((categories ?? []).map((c) => [String(c.id), String(c.name)]))
+  const editorNameById = new Map(
+    (editUsers ?? []).map((u) => [String(u.id), String(u.full_name ?? 'Unknown user')]),
+  )
+
+  const entriesByLogId = new Map<string, Array<{ category_name: string; count: number; category_id: string }>>()
+  for (const row of entriesRes.data ?? []) {
+    const logId = String(row.log_id)
+    if (!entriesByLogId.has(logId)) entriesByLogId.set(logId, [])
+    entriesByLogId.get(logId)!.push({
+      category_id: String(row.category_id),
+      category_name: categoryNameById.get(String(row.category_id)) ?? 'Uncategorised',
+      count: Number(row.count ?? 0),
+    })
+  }
+
+  const editsByLogId = new Map<
+    string,
+    Array<{
+      id: string
+      edited_at: string
+      edited_by_name: string
+      field_name: string
+      old_value: string | null
+      new_value: string | null
+      reason: string | null
+    }>
+  >()
+  for (const edit of editRows) {
+    const logId = String(edit.activity_log_id)
+    if (!editsByLogId.has(logId)) editsByLogId.set(logId, [])
+    editsByLogId.get(logId)!.push({
+      id: String(edit.id),
+      edited_at: String(edit.edited_at),
+      edited_by_name: edit.edited_by ? (editorNameById.get(String(edit.edited_by)) ?? 'Unknown user') : 'Unknown user',
+      field_name: String(edit.field_name),
+      old_value: edit.old_value ?? null,
+      new_value: edit.new_value ?? null,
+      reason: edit.reason ?? null,
+    })
+  }
+
+  return (logs ?? []).map((log) => {
+    const id = String(log.id)
+    return {
+      log_id: id,
+      log_date: String(log.log_date),
+      hours_worked: log.hours_worked == null ? null : Number(log.hours_worked),
+      clinician_name: clinicianNameById.get(String(log.clinician_id)) ?? 'Unknown clinician',
+      practice_name: practiceNameById.get(String(log.practice_id)) ?? 'Unknown practice',
+      submitted_by: String(log.submitted_by ?? ''),
+      entries: entriesByLogId.get(id) ?? [],
+      edits: editsByLogId.get(id) ?? [],
+      is_edited: (editsByLogId.get(id) ?? []).length > 0,
+    }
+  })
 }
 
 type DashboardActivityStats = {

@@ -22,6 +22,14 @@ export type SaveActivityLogResult =
   | { success: true; log_id: string }
   | { success: false; error: string }
 
+const MANAGER_ROLES = new Set([
+  'manager',
+  'practice_manager',
+  'pcn_manager',
+  'admin',
+  'superadmin',
+])
+
 export async function saveActivityLog(input: SaveActivityLogInput): Promise<SaveActivityLogResult> {
   const profile = await getProfile()
   const supabase = await createClient()
@@ -97,6 +105,175 @@ export async function saveActivityLog(input: SaveActivityLogInput): Promise<Save
   revalidatePath('/')
   revalidatePath('/reporting')
   return { success: true, log_id }
+}
+
+export type EditActivityLogInput = {
+  log_id: string
+  hours_worked: number | null
+  entries: CategoryEntry[]
+  reason?: string
+}
+
+export async function editActivityLog(
+  input: EditActivityLogInput,
+): Promise<SaveActivityLogResult> {
+  const profile = await getProfile()
+  const supabase = await createClient()
+  const logId = input.log_id.trim()
+  if (!logId) return { success: false, error: 'Missing log id.' }
+
+  const nonZeroEntries = input.entries.filter((e) => e.count > 0)
+  if (nonZeroEntries.length === 0) {
+    return { success: false, error: 'Please enter at least one appointment count.' }
+  }
+
+  const { data: logRow, error: logError } = await supabase
+    .from('activity_logs')
+    .select('id, submitted_by, organisation_id, hours_worked')
+    .eq('id', logId)
+    .single()
+
+  if (logError || !logRow) {
+    return { success: false, error: 'Activity log not found.' }
+  }
+  if (logRow.organisation_id !== profile.organisation_id) {
+    return { success: false, error: 'Unauthorized.' }
+  }
+
+  const canManage = MANAGER_ROLES.has(profile.role)
+  const canEdit = logRow.submitted_by === profile.id || canManage
+  if (!canEdit) {
+    return { success: false, error: 'You can only edit your own logs.' }
+  }
+
+  const categoryIds = nonZeroEntries.map((e) => e.category_id)
+  const { data: validCats } = await supabase
+    .from('activity_categories')
+    .select('id, name')
+    .eq('organisation_id', profile.organisation_id)
+    .in('id', categoryIds)
+  if (!validCats || validCats.length !== categoryIds.length) {
+    return { success: false, error: 'Invalid category.' }
+  }
+
+  const { data: oldEntries, error: oldEntriesError } = await supabase
+    .from('activity_log_entries')
+    .select('category_id, count')
+    .eq('log_id', logId)
+  if (oldEntriesError) {
+    return { success: false, error: 'Failed to load existing entries.' }
+  }
+
+  const oldByCategory = new Map<string, number>()
+  for (const row of oldEntries ?? []) {
+    oldByCategory.set(String(row.category_id), Number(row.count ?? 0))
+  }
+  const newByCategory = new Map<string, number>()
+  for (const row of nonZeroEntries) {
+    newByCategory.set(String(row.category_id), Number(row.count ?? 0))
+  }
+
+  const changedCategoryIds = new Set<string>()
+  for (const id of oldByCategory.keys()) changedCategoryIds.add(id)
+  for (const id of newByCategory.keys()) changedCategoryIds.add(id)
+
+  const categoryNameById = new Map<string, string>()
+  for (const c of validCats) categoryNameById.set(String(c.id), String(c.name))
+  if (changedCategoryIds.size > categoryNameById.size) {
+    const missing = [...changedCategoryIds].filter((id) => !categoryNameById.has(id))
+    if (missing.length > 0) {
+      const { data: extraCats } = await supabase
+        .from('activity_categories')
+        .select('id, name')
+        .in('id', missing)
+      for (const c of extraCats ?? []) {
+        categoryNameById.set(String(c.id), String(c.name))
+      }
+    }
+  }
+
+  const oldHours = logRow.hours_worked == null ? null : Number(logRow.hours_worked)
+  const newHours = input.hours_worked == null ? null : Number(input.hours_worked)
+  const reason = input.reason?.trim() ? input.reason.trim() : null
+  const auditRows: Array<{
+    activity_log_id: string
+    edited_by: string
+    field_name: string
+    old_value: string | null
+    new_value: string | null
+    reason: string | null
+  }> = []
+
+  if (oldHours !== newHours) {
+    auditRows.push({
+      activity_log_id: logId,
+      edited_by: profile.id,
+      field_name: 'hours_worked',
+      old_value: oldHours == null ? null : String(oldHours),
+      new_value: newHours == null ? null : String(newHours),
+      reason,
+    })
+  }
+
+  for (const categoryId of changedCategoryIds) {
+    const oldCount = oldByCategory.get(categoryId) ?? 0
+    const newCount = newByCategory.get(categoryId) ?? 0
+    if (oldCount === newCount) continue
+    const categoryLabel = categoryNameById.get(categoryId) ?? categoryId
+    auditRows.push({
+      activity_log_id: logId,
+      edited_by: profile.id,
+      field_name: `category:${categoryLabel}`,
+      old_value: String(oldCount),
+      new_value: String(newCount),
+      reason,
+    })
+  }
+
+  const { error: updateError } = await supabase
+    .from('activity_logs')
+    .update({ hours_worked: newHours })
+    .eq('id', logId)
+  if (updateError) {
+    return { success: false, error: 'Failed to update log.' }
+  }
+
+  const { error: deleteError } = await supabase
+    .from('activity_log_entries')
+    .delete()
+    .eq('log_id', logId)
+  if (deleteError) {
+    return { success: false, error: 'Failed to update entries.' }
+  }
+
+  const { error: insertEntriesError } = await supabase
+    .from('activity_log_entries')
+    .insert(
+      nonZeroEntries.map((e) => ({
+        log_id: logId,
+        category_id: e.category_id,
+        count: e.count,
+      })),
+    )
+  if (insertEntriesError) {
+    return { success: false, error: 'Failed to save entries.' }
+  }
+
+  if (auditRows.length > 0) {
+    const { error: auditError } = await supabase
+      .from('activity_log_edits')
+      .insert(auditRows)
+    if (auditError) {
+      console.error('[editActivityLog] audit insert failed:', auditError.message)
+      return { success: false, error: 'Saved changes but failed to write audit trail.' }
+    }
+  }
+
+  revalidatePath('/activity')
+  revalidatePath('/activity/day')
+  revalidatePath('/')
+  revalidatePath('/reporting')
+  return { success: true, log_id: logId }
 }
 
 export type BulkSaveInput = {

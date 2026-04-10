@@ -98,7 +98,12 @@ export default async function ActivityPage() {
           defaultPracticeId={profile?.practice_id ?? null}
           defaultHoursPerDay={defaultHoursPerDay}
         />
-        <RecentLogs logs={recentLogs} />
+        <RecentLogs
+          logs={recentLogs}
+          categories={categories}
+          currentUserId={profile?.id ?? ''}
+          currentUserRole={role}
+        />
       </div>
     )
   } catch (error) {
