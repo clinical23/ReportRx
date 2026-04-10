@@ -364,32 +364,47 @@ export default function ActivityLogForm({
           <div className="rounded-xl border border-gray-200 bg-white p-5 pb-28 shadow-sm sm:p-6 md:pb-6">
             <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="min-w-0">
-                <label className="mb-1.5 block text-xs font-medium text-gray-600">
-                  Clinician
-                </label>
                 {clinicianLocked ? (
-                  <p className="py-3 text-base font-medium text-gray-900 md:py-2.5 md:text-sm">
-                    {clinicianDisplayName}
-                  </p>
+                  <>
+                    <span className="mb-1.5 block text-xs font-medium text-gray-600">
+                      Clinician
+                    </span>
+                    <p className="py-3 text-base font-medium text-gray-900 md:py-2.5 md:text-sm">
+                      {clinicianDisplayName}
+                    </p>
+                  </>
                 ) : (
-                  <select
-                    value={clinicianId}
-                    onChange={(e) => setClinicianId(e.target.value)}
-                    className={controlClass}
-                  >
-                    {clinicians.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <label
+                      className="mb-1.5 block text-xs font-medium text-gray-600"
+                      htmlFor="activity-clinician-select"
+                    >
+                      Clinician
+                    </label>
+                    <select
+                      id="activity-clinician-select"
+                      value={clinicianId}
+                      onChange={(e) => setClinicianId(e.target.value)}
+                      className={controlClass}
+                    >
+                      {clinicians.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </>
                 )}
               </div>
               <div className="min-w-0">
-                <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                <label
+                  className="mb-1.5 block text-xs font-medium text-gray-600"
+                  htmlFor="activity-practice-select"
+                >
                   Practice
                 </label>
                 <select
+                  id="activity-practice-select"
                   value={practiceId}
                   onChange={(e) => setPracticeId(e.target.value)}
                   className={controlClass}
@@ -402,10 +417,14 @@ export default function ActivityLogForm({
                 </select>
               </div>
               <div className="min-w-0">
-                <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                <label
+                  className="mb-1.5 block text-xs font-medium text-gray-600"
+                  htmlFor="activity-log-date"
+                >
                   Date
                 </label>
                 <input
+                  id="activity-log-date"
                   type="date"
                   value={logDate}
                   onChange={(e) => setLogDate(e.target.value)}
@@ -446,7 +465,11 @@ export default function ActivityLogForm({
 
             {showNewCat ? (
               <div className="mb-4 flex flex-wrap items-center gap-2">
+                <label htmlFor="activity-new-category-name" className="sr-only">
+                  New category name
+                </label>
                 <input
+                  id="activity-new-category-name"
                   type="text"
                   placeholder="Category name"
                   value={newCatName}
@@ -486,10 +509,14 @@ export default function ActivityLogForm({
             )}
 
             <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-4">
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-500">
+              <label
+                className="mb-2 block text-xs font-medium uppercase tracking-wide text-gray-500"
+                htmlFor="activity-hours-worked"
+              >
                 Hours worked
               </label>
               <input
+                id="activity-hours-worked"
                 type="number"
                 min={0}
                 step={0.5}
@@ -589,10 +616,14 @@ export default function ActivityLogForm({
 
             <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="min-w-0">
-                <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                <label
+                  className="mb-1.5 block text-xs font-medium text-gray-600"
+                  htmlFor="activity-bulk-practice"
+                >
                   Practice
                 </label>
                 <select
+                  id="activity-bulk-practice"
                   value={bulkPracticeId}
                   onChange={(e) => setBulkPracticeId(e.target.value)}
                   className={controlClass}
@@ -605,10 +636,14 @@ export default function ActivityLogForm({
                 </select>
               </div>
               <div className="min-w-0">
-                <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                <label
+                  className="mb-1.5 block text-xs font-medium text-gray-600"
+                  htmlFor="activity-bulk-date"
+                >
                   Date
                 </label>
                 <input
+                  id="activity-bulk-date"
                   type="date"
                   value={bulkDate}
                   onChange={(e) => setBulkDate(e.target.value)}
@@ -616,10 +651,14 @@ export default function ActivityLogForm({
                 />
               </div>
               <div className="min-w-0">
-                <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                <label
+                  className="mb-1.5 block text-xs font-medium text-gray-600"
+                  htmlFor="activity-bulk-hours"
+                >
                   Hours worked
                 </label>
                 <input
+                  id="activity-bulk-hours"
                   type="number"
                   min={0}
                   step={0.5}

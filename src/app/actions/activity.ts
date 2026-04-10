@@ -414,53 +414,63 @@ export async function bulkSaveActivityLogs(
     return { success: false, error: 'One or more clinicians are not valid for this practice.' }
   }
 
-  for (const clinician_id of input.clinician_ids) {
-    const { data: logData, error: logError } = await supabase
-      .from('activity_logs')
-      .upsert(
-        {
-          clinician_id,
-          practice_id: input.practice_id,
-          log_date: input.log_date,
-          hours_worked: input.hours_worked,
-          organisation_id: profile.organisation_id,
-          submitted_by: profile.id,
-        },
-        { onConflict: 'clinician_id,practice_id,log_date' }
-      )
-      .select('id')
-      .single()
+  const clinicianIds = [...new Set(input.clinician_ids)]
+  const rowsToUpsert = clinicianIds.map((clinician_id) => ({
+    clinician_id,
+    practice_id: input.practice_id,
+    log_date: input.log_date,
+    hours_worked: input.hours_worked,
+    organisation_id: profile.organisation_id,
+    submitted_by: profile.id,
+  }))
 
-    if (logError || !logData) {
-      return { success: false, error: 'Failed to save one or more logs.' }
-    }
+  const { data: upsertedLogs, error: upsertError } = await supabase
+    .from('activity_logs')
+    .upsert(rowsToUpsert, { onConflict: 'clinician_id,practice_id,log_date' })
+    .select('id, clinician_id')
 
-    const { error: deleteError } = await supabase
-      .from('activity_log_entries')
-      .delete()
-      .eq('log_id', logData.id)
-    if (deleteError) {
-      return { success: false, error: 'Failed to update entries for one or more logs.' }
-    }
+  if (upsertError) {
+    return { success: false, error: 'Failed to save logs.' }
+  }
+  if (!upsertedLogs || upsertedLogs.length !== clinicianIds.length) {
+    return { success: false, error: 'Failed to save one or more logs.' }
+  }
 
-    const { error: insertError } = await supabase
-      .from('activity_log_entries')
-      .insert(
-        nonZeroEntries.map((e) => ({
-          log_id: logData.id,
-          category_id: e.category_id,
-          count: e.count,
-        }))
-      )
+  const logIdByClinician = new Map(
+    upsertedLogs.map((r) => [String(r.clinician_id), String(r.id)]),
+  )
+  const logIds = upsertedLogs.map((r) => String(r.id))
+
+  const { error: deleteError } = await supabase
+    .from('activity_log_entries')
+    .delete()
+    .in('log_id', logIds)
+  if (deleteError) {
+    return { success: false, error: 'Failed to clear previous entries for one or more logs.' }
+  }
+
+  const allEntries = clinicianIds.flatMap((clinician_id) => {
+    const logId = logIdByClinician.get(clinician_id)
+    if (!logId) return []
+    return nonZeroEntries.map((e) => ({
+      log_id: logId,
+      category_id: e.category_id,
+      count: e.count,
+    }))
+  })
+
+  if (allEntries.length > 0) {
+    const { error: insertError } = await supabase.from('activity_log_entries').insert(allEntries)
     if (insertError) {
       return { success: false, error: 'Failed to save entries for one or more logs.' }
     }
   }
 
   revalidatePath('/activity')
+  revalidatePath('/activity/day')
   revalidatePath('/')
   revalidatePath('/reporting')
-  return { success: true, count: input.clinician_ids.length }
+  return { success: true, count: clinicianIds.length }
 }
 
 export async function addActivityCategory(

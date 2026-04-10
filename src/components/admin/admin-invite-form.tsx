@@ -76,24 +76,41 @@ export function AdminInviteForm({ organisationId, allowAdminRole }: Props) {
         className="grid grid-cols-1 gap-3 md:grid-cols-2"
       >
         <input type="hidden" name="organisation_id" value={organisationId} />
-        <input
-          type="email"
-          name="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email address"
-          inputMode="email"
-          autoComplete="email"
-          className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
-        />
-        <select
-          name="role"
-          required
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm md:col-span-2"
-        >
+        <div className="md:col-span-2">
+          <label
+            htmlFor="admin-invite-email"
+            className="mb-1 block text-xs font-medium text-gray-600"
+          >
+            Email address
+          </label>
+          <input
+            id="admin-invite-email"
+            type="email"
+            name="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email address"
+            inputMode="email"
+            autoComplete="email"
+            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label
+            htmlFor="admin-invite-role"
+            className="mb-1 block text-xs font-medium text-gray-600"
+          >
+            Role
+          </label>
+          <select
+            id="admin-invite-role"
+            name="role"
+            required
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
+          >
           <option value="" disabled>
             Select role…
           </option>
@@ -103,6 +120,7 @@ export function AdminInviteForm({ organisationId, allowAdminRole }: Props) {
             <option value="admin">Admin</option>
           ) : null}
         </select>
+        </div>
         <div className="md:col-span-2">
           <button
             type="submit"

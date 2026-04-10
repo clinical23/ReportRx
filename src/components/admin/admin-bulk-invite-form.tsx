@@ -133,10 +133,14 @@ export function AdminBulkInviteForm({
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700">
+      <label
+        className="block text-sm font-medium text-gray-700"
+        htmlFor="admin-bulk-invite-emails"
+      >
         Email addresses (one per line, or comma / semicolon separated)
       </label>
       <textarea
+        id="admin-bulk-invite-emails"
         value={raw}
         onChange={(e) => setRaw(e.target.value)}
         rows={8}
@@ -175,8 +179,14 @@ export function AdminBulkInviteForm({
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1">
-          <label className="mb-1 block text-sm font-medium text-gray-700">Role</label>
+          <label
+            className="mb-1 block text-sm font-medium text-gray-700"
+            htmlFor="admin-bulk-invite-role"
+          >
+            Role
+          </label>
           <select
+            id="admin-bulk-invite-role"
             value={role}
             onChange={(e) => setRole(e.target.value)}
             disabled={sending}

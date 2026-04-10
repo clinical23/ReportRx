@@ -203,8 +203,11 @@ function ReportingFilters({
         }}
       >
         <div className="grid gap-1">
-          <label className="text-xs text-gray-500">Start</label>
+          <label htmlFor="report-range-start" className="text-xs text-gray-500">
+            Start
+          </label>
           <input
+            id="report-range-start"
             name="start"
             type="date"
             defaultValue={startDate}
@@ -212,8 +215,11 @@ function ReportingFilters({
           />
         </div>
         <div className="grid gap-1">
-          <label className="text-xs text-gray-500">End</label>
+          <label htmlFor="report-range-end" className="text-xs text-gray-500">
+            End
+          </label>
           <input
+            id="report-range-end"
             name="end"
             type="date"
             defaultValue={endDate}

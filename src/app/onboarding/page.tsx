@@ -128,10 +128,14 @@ export default function OnboardingPage() {
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
+              <label
+                className="mb-1 block text-sm font-medium text-gray-700"
+                htmlFor="onboarding-full-name"
+              >
                 Your full name
               </label>
               <input
+                id="onboarding-full-name"
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
