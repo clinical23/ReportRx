@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 
 import AppSidebar from "@/components/layout/app-sidebar";
 import { MobileDrawer } from "@/components/layout/mobile-drawer";
@@ -28,7 +29,16 @@ export function AppLayoutClient({
   profile,
   practiceName,
 }: Props) {
+  const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  if (pathname?.startsWith("/mfa-verify")) {
+    return (
+      <div className="min-h-screen bg-[#F7F8FA]">
+        {children}
+      </div>
+    );
+  }
 
   const sidebarProps = {
     practiceName,

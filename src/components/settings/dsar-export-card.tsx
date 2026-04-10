@@ -76,7 +76,7 @@ export function DsarExportCard({ lastExportAt }: Props) {
   };
 
   return (
-    <Card>
+    <Card id="settings-data">
       <CardHeader>
         <CardTitle className="text-base">Your Data</CardTitle>
         <CardDescription>

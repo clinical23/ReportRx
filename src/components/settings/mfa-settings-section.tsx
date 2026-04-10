@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CheckCircle2, Copy, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+import { logAudit } from "@/lib/audit";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,12 +22,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast-provider";
+import { formatDateTimeUK } from "@/lib/datetime";
 import { createClient } from "@/lib/supabase/client";
+
+type VerifiedTotp = {
+  id: string;
+  friendly_name?: string | null;
+  created_at?: string;
+};
 
 export function MfaSettingsSection() {
   const router = useRouter();
   const toast = useToast();
-  const [verifiedFactorId, setVerifiedFactorId] = useState<string | null>(null);
+  const [verifiedFactor, setVerifiedFactor] = useState<VerifiedTotp | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
@@ -35,6 +44,10 @@ export function MfaSettingsSection() {
   const [confirmCode, setConfirmCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [enrolError, setEnrolError] = useState<string | null>(null);
+  const [copyLabel, setCopyLabel] = useState<string | null>(null);
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [unenrollError, setUnenrollError] = useState<string | null>(null);
   const enrolCompleteRef = useRef(false);
   const closedDuringEnrolRef = useRef(false);
 
@@ -43,11 +56,20 @@ export function MfaSettingsSection() {
     const { data, error } = await supabase.auth.mfa.listFactors();
     if (error) {
       console.error("[MFA] listFactors", error.message);
-      setVerifiedFactorId(null);
+      setVerifiedFactor(null);
       return;
     }
-    const verified = data?.totp?.find((f) => f.status === "verified") ?? null;
-    setVerifiedFactorId(verified?.id ?? null);
+    const totpFactor =
+      data?.totp?.find((f) => f.status === "verified") ?? null;
+    if (!totpFactor?.id) {
+      setVerifiedFactor(null);
+      return;
+    }
+    setVerifiedFactor({
+      id: totpFactor.id,
+      friendly_name: totpFactor.friendly_name,
+      created_at: totpFactor.created_at,
+    });
   }, []);
 
   useEffect(() => {
@@ -88,7 +110,6 @@ export function MfaSettingsSection() {
       setEnrolling(false);
       const msg = error?.message ?? "Could not start 2FA setup.";
       setEnrolError(msg);
-      toast.error(msg);
       return;
     }
 
@@ -103,7 +124,7 @@ export function MfaSettingsSection() {
     setQrCode(totp?.qr_code ?? null);
     setSecret(totp?.secret ?? null);
     setEnrolling(false);
-  }, [toast]);
+  }, []);
 
   const handleModalOpenChange = (open: boolean) => {
     if (open) {
@@ -124,6 +145,18 @@ export function MfaSettingsSection() {
     setModalOpen(false);
   };
 
+  const copySecret = async () => {
+    if (!secret) return;
+    try {
+      await navigator.clipboard.writeText(secret);
+      setCopyLabel("Copied");
+      window.setTimeout(() => setCopyLabel(null), 2000);
+    } catch {
+      setCopyLabel("Could not copy");
+      window.setTimeout(() => setCopyLabel(null), 2000);
+    }
+  };
+
   const submitEnrolment = async (e: React.FormEvent) => {
     e.preventDefault();
     const digits = confirmCode.replace(/\D/g, "").slice(0, 6);
@@ -133,65 +166,64 @@ export function MfaSettingsSection() {
     setEnrolError(null);
     const supabase = createClient();
 
-    const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({
+    const { data: challenge, error: chErr } = await supabase.auth.mfa.challenge({
       factorId: pendingFactorId,
     });
-    if (chErr || !ch?.id) {
+    if (chErr || !challenge?.id) {
       setSubmitting(false);
-      setEnrolError("Could not verify the code. Try again.");
-      toast.error("Could not verify the code. Try again.");
+      setEnrolError("Could not start verification. Please try again.");
       return;
     }
 
     const { error: vErr } = await supabase.auth.mfa.verify({
       factorId: pendingFactorId,
-      challengeId: ch.id,
+      challengeId: challenge.id,
       code: digits,
     });
 
     setSubmitting(false);
 
     if (vErr) {
-      setEnrolError("Invalid code. Check your app and try again.");
-      toast.error("Invalid code. Check your app and try again.");
+      setEnrolError("Invalid code. Please try again.");
       return;
     }
 
     enrolCompleteRef.current = true;
+    void logAudit("create", "auth", undefined, { mfa: "enrolled" });
     await refreshFactors();
     toast.success("Two-factor authentication enabled");
     handleModalOpenChange(false);
     router.refresh();
   };
 
-  const disableMfa = async () => {
-    if (
-      !window.confirm(
-        "Are you sure? This will reduce the security of your account.",
-      )
-    ) {
-      return;
-    }
-    if (!verifiedFactorId) return;
-
+  const confirmRemoveMfa = async () => {
+    if (!verifiedFactor?.id) return;
+    setRemoving(true);
+    setUnenrollError(null);
     const supabase = createClient();
     const { error } = await supabase.auth.mfa.unenroll({
-      factorId: verifiedFactorId,
+      factorId: verifiedFactor.id,
     });
+    setRemoving(false);
     if (error) {
-      toast.error(error.message);
+      setUnenrollError(error.message);
       return;
     }
-    setVerifiedFactorId(null);
-    toast.success("Two-factor authentication disabled");
+    void logAudit("delete", "auth", undefined, { mfa: "unenrolled" });
+    setVerifiedFactor(null);
+    setRemoveOpen(false);
+    toast.success("Two-factor authentication removed");
     router.refresh();
   };
 
   if (loadingStatus) {
     return (
-      <Card>
+      <Card id="settings-mfa">
         <CardHeader>
-          <CardTitle className="text-base">Security</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Shield className="size-5 text-teal-600" aria-hidden />
+            Two-Factor Authentication
+          </CardTitle>
           <CardDescription>Loading two-factor settings…</CardDescription>
         </CardHeader>
       </Card>
@@ -200,46 +232,71 @@ export function MfaSettingsSection() {
 
   return (
     <>
-      <Card>
+      <Card id="settings-mfa">
         <CardHeader>
-          <CardTitle className="text-base">Security</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Shield className="size-5 text-teal-600" aria-hidden />
+            Two-Factor Authentication
+          </CardTitle>
           <CardDescription>
-            Protect your account with a code from an authenticator app.
+            {verifiedFactor
+              ? "Your account is protected with a code from an authenticator app."
+              : "Add an extra layer of security to your account using an authenticator app."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {verifiedFactorId ? (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {verifiedFactor ? (
+            <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2">
+                <CheckCircle2 className="size-5 shrink-0 text-emerald-600" aria-hidden />
                 <span className="text-sm font-medium text-gray-900">
-                  Two-Factor Authentication
-                </span>
-                <span className="inline-flex rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-800">
-                  Enabled
+                  Two-factor authentication is enabled
                 </span>
               </div>
-              <Button type="button" variant="outline" onClick={() => void disableMfa()}>
-                Disable 2FA
+              <dl className="grid gap-2 text-sm text-gray-600">
+                <div>
+                  <dt className="text-xs font-medium text-gray-500">Authenticator</dt>
+                  <dd className="mt-0.5 text-gray-900">
+                    {verifiedFactor.friendly_name?.trim() || "ReportRx"}
+                  </dd>
+                </div>
+                {verifiedFactor.created_at ? (
+                  <div>
+                    <dt className="text-xs font-medium text-gray-500">Added</dt>
+                    <dd className="mt-0.5 text-gray-900">
+                      {formatDateTimeUK(verifiedFactor.created_at)}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+              {unenrollError ? (
+                <p className="text-sm text-red-600" role="alert">
+                  {unenrollError}
+                </p>
+              ) : null}
+              <Button
+                type="button"
+                variant="destructive"
+                className="min-h-11 w-full sm:w-auto"
+                onClick={() => {
+                  setUnenrollError(null);
+                  setRemoveOpen(true);
+                }}
+              >
+                Remove 2FA
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900">
-                  Two-Factor Authentication
-                </p>
-                <p className="mt-1 text-sm text-gray-600">
-                  Add an extra layer of security to your account using an authenticator app.
-                </p>
-              </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
               <Button
                 type="button"
+                className="min-h-11 w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto sm:min-h-0"
                 onClick={() => {
                   setModalOpen(true);
                   void startEnrolment();
                 }}
               >
-                Enable 2FA
+                Set up 2FA
               </Button>
             </div>
           )}
@@ -266,20 +323,38 @@ export function MfaSettingsSection() {
             <form onSubmit={submitEnrolment} className="space-y-4">
               {qrCode ? (
                 <div className="flex justify-center">
-                  {/* TOTP QR is a data: URI from Supabase — use native img */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={qrCode}
                     alt="Authenticator QR code"
-                    className="h-[200px] w-[200px] max-h-[200px] max-w-[200px] object-contain"
+                    width={200}
+                    height={200}
+                    className="h-[200px] w-[200px] object-contain"
                   />
                 </div>
               ) : null}
 
               {secret ? (
                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                  <p className="text-xs font-medium text-gray-600">Secret key</p>
-                  <p className="mt-1 break-all font-mono text-sm text-gray-900">{secret}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium text-gray-600">Secret key</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 shrink-0"
+                      onClick={() => void copySecret()}
+                    >
+                      <Copy className="size-3.5" aria-hidden />
+                      Copy
+                    </Button>
+                  </div>
+                  <p className="mt-2 break-all font-mono text-sm text-gray-900">{secret}</p>
+                  {copyLabel ? (
+                    <p className="mt-1 text-xs text-teal-700" aria-live="polite">
+                      {copyLabel}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -318,13 +393,43 @@ export function MfaSettingsSection() {
                 </Button>
                 <Button
                   type="submit"
+                  className="bg-teal-600 text-white hover:bg-teal-700"
                   disabled={submitting || confirmCode.length !== 6 || !pendingFactorId}
                 >
-                  {submitting ? "Confirming…" : "Confirm"}
+                  {submitting ? "Enabling…" : "Verify & Enable"}
                 </Button>
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={removeOpen} onOpenChange={(o) => !removing && setRemoveOpen(o)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove two-factor authentication?</DialogTitle>
+            <DialogDescription>
+              Are you sure? This will remove two-factor authentication from your account.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={removing}
+              onClick={() => setRemoveOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={removing}
+              onClick={() => void confirmRemoveMfa()}
+            >
+              {removing ? "Removing…" : "Remove 2FA"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

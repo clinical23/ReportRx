@@ -246,13 +246,48 @@ export function SettingsPageClient({
         <p className="mt-1 text-sm text-gray-500">
           Manage your organisation, practices and activity categories.
         </p>
+        <nav
+          className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-gray-100 pt-4 text-sm"
+          aria-label="Settings sections"
+        >
+          <a
+            href="#settings-profile"
+            className="font-medium text-teal-700 underline decoration-teal-700/30 underline-offset-2 hover:decoration-teal-700"
+          >
+            Profile
+          </a>
+          <a
+            href="#settings-mfa"
+            className="font-medium text-teal-700 underline decoration-teal-700/30 underline-offset-2 hover:decoration-teal-700"
+          >
+            Two-factor authentication
+          </a>
+          <a
+            href="#settings-data"
+            className="font-medium text-teal-700 underline decoration-teal-700/30 underline-offset-2 hover:decoration-teal-700"
+          >
+            Your data
+          </a>
+          {isOrgAdmin ? (
+            <>
+              <a
+                href="#settings-org"
+                className="font-medium text-teal-700 underline decoration-teal-700/30 underline-offset-2 hover:decoration-teal-700"
+              >
+                Organisation
+              </a>
+              <a
+                href="#settings-categories"
+                className="font-medium text-teal-700 underline decoration-teal-700/30 underline-offset-2 hover:decoration-teal-700"
+              >
+                Activity categories
+              </a>
+            </>
+          ) : null}
+        </nav>
       </div>
 
-      <MfaSettingsSection />
-
-      <DsarExportCard lastExportAt={lastDsarExportAt} />
-
-      <Card>
+      <Card id="settings-profile">
         <CardHeader>
           <CardTitle className="text-base">Profile</CardTitle>
           <CardDescription>
@@ -319,9 +354,13 @@ export function SettingsPageClient({
         </CardContent>
       </Card>
 
+      <MfaSettingsSection />
+
+      <DsarExportCard lastExportAt={lastDsarExportAt} />
+
       {isOrgAdmin ? (
         <>
-          <Card>
+          <Card id="settings-org">
             <CardHeader>
               <CardTitle className="text-base">Organisation</CardTitle>
               <CardDescription>
@@ -406,7 +445,7 @@ export function SettingsPageClient({
             </CardContent>
           </Card>
 
-          <Card>
+          <Card id="settings-categories">
             <CardHeader>
               <CardTitle className="text-base">Activity categories</CardTitle>
               <CardDescription>

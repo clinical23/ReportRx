@@ -45,7 +45,20 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=auth_failed`)
   }
 
-  // TODO: audit login (magic link / OAuth) — needs a Supabase insert after session is on the response
+  let redirectPath = safeNext
+  const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+  if (aalData?.nextLevel === 'aal2' && aalData?.currentLevel !== 'aal2') {
+    redirectPath = '/mfa-verify'
+  }
+
+  if (redirectPath !== safeNext) {
+    const mfaResponse = NextResponse.redirect(`${origin}${redirectPath}`)
+    const setCookieHeaders = response.headers.getSetCookie?.() ?? []
+    for (const cookie of setCookieHeaders) {
+      mfaResponse.headers.append('Set-Cookie', cookie)
+    }
+    return mfaResponse
+  }
 
   return response
 }

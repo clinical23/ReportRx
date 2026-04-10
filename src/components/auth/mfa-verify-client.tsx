@@ -10,24 +10,53 @@ export function MfaVerifyClient() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [code, setCode] = useState("");
-  const [challengeId, setChallengeId] = useState<string | null>(null);
   const [factorId, setFactorId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
 
-  const startChallenge = useCallback(async (fid: string) => {
-    const supabase = createClient();
-    const { data, error: chErr } = await supabase.auth.mfa.challenge({
-      factorId: fid,
-    });
-    if (chErr || !data?.id) {
-      setInitError("Could not start verification. Please refresh the page.");
-      return;
-    }
-    setChallengeId(data.id);
-  }, []);
+  const runVerify = useCallback(
+    async (raw: string) => {
+      const digits = raw.replace(/\D/g, "").slice(0, 6);
+      if (digits.length !== 6 || !factorId) return;
+
+      setError(null);
+      setVerifying(true);
+      const supabase = createClient();
+
+      const { data: challenge, error: chErr } = await supabase.auth.mfa.challenge({
+        factorId,
+      });
+      if (chErr || !challenge?.id) {
+        setVerifying(false);
+        setError("Could not start verification. Please try again.");
+        setCode("");
+        inputRef.current?.focus();
+        return;
+      }
+
+      const { error: vErr } = await supabase.auth.mfa.verify({
+        factorId,
+        challengeId: challenge.id,
+        code: digits,
+      });
+
+      setVerifying(false);
+
+      if (vErr) {
+        setError("Invalid code. Please try again.");
+        setCode("");
+        inputRef.current?.focus();
+        return;
+      }
+
+      await logAudit("login", "auth", undefined, { mfa: "verified" });
+      router.push("/");
+      router.refresh();
+    },
+    [factorId, router],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -60,7 +89,6 @@ export function MfaVerifyClient() {
       }
 
       setFactorId(totpVerified.id);
-      await startChallenge(totpVerified.id);
       if (!cancelled) setLoading(false);
     };
 
@@ -68,40 +96,11 @@ export function MfaVerifyClient() {
     return () => {
       cancelled = true;
     };
-  }, [router, startChallenge]);
-
-  const verifyWithCode = useCallback(
-    async (raw: string) => {
-      const digits = raw.replace(/\D/g, "").slice(0, 6);
-      if (digits.length !== 6 || !factorId || !challengeId) return;
-
-      setError(null);
-      setVerifying(true);
-      const supabase = createClient();
-      const { error: vErr } = await supabase.auth.mfa.verify({
-        factorId,
-        challengeId,
-        code: digits,
-      });
-      setVerifying(false);
-
-      if (vErr) {
-        setError("Invalid code. Please try again.");
-        await startChallenge(factorId);
-        setCode("");
-        inputRef.current?.focus();
-        return;
-      }
-
-      router.push("/");
-      router.refresh();
-    },
-    [challengeId, factorId, router, startChallenge],
-  );
+  }, [router]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    void verifyWithCode(code);
+    void runVerify(code);
   };
 
   const signOut = async () => {
@@ -139,11 +138,16 @@ export function MfaVerifyClient() {
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="mb-6 text-center">
+          <div className="mb-3">
+            <span className="text-lg font-semibold tracking-tight text-gray-900">
+              ReportRx
+            </span>
+          </div>
           <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-teal-600">
             <span className="text-lg font-bold text-white">Rx</span>
           </div>
           <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">
-            Two-Factor Authentication
+            Verify your identity
           </h1>
           <p className="mt-2 text-sm text-gray-600">
             Enter the 6-digit code from your authenticator app
@@ -163,9 +167,6 @@ export function MfaVerifyClient() {
               const v = e.target.value.replace(/\D/g, "").slice(0, 6);
               setCode(v);
               setError(null);
-              if (v.length === 6 && challengeId && factorId && !verifying) {
-                void verifyWithCode(v);
-              }
             }}
             className="w-full rounded-lg border border-gray-200 bg-white px-4 py-4 text-center font-mono text-2xl tracking-[0.35em] text-gray-900 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
             placeholder="••••••"
@@ -181,7 +182,7 @@ export function MfaVerifyClient() {
 
           <button
             type="submit"
-            disabled={verifying || code.replace(/\D/g, "").length !== 6 || !challengeId}
+            disabled={verifying || code.replace(/\D/g, "").length !== 6 || !factorId}
             className="w-full rounded-lg bg-teal-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {verifying ? "Verifying…" : "Verify"}
