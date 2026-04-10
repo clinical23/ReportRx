@@ -1,14 +1,6 @@
 import { getProfile } from '@/lib/supabase/auth'
 import { createClient } from '@/lib/supabase/server'
 
-/** Roles expected to submit activity logs (aligned with activity / scope usage). */
-const DATA_COMPLETENESS_ROLES = [
-  'clinician',
-  'manager',
-  'practice_manager',
-  'pcn_manager',
-] as const
-
 type ActivityReportRow = {
   log_id: string | null
   log_date: string | null
@@ -103,27 +95,33 @@ export async function getDataCompleteness(
   startDate: string,
   endDate: string,
 ): Promise<DataCompletenessRow[]> {
-  const sessionProfile = await getProfile()
-  const supabase = await createClient()
+  await getProfile()
   const expected = countWeekdaysInclusive(startDate, endDate)
+  const rows = await fetchRowsForRange(startDate, endDate)
 
-  const { data: team, error: teamError } = await supabase
-    .from('profiles')
-    .select('id, full_name, clinician_id, role')
-    .eq('organisation_id', sessionProfile.organisation_id)
-    .eq('is_active', true)
-    .in('role', [...DATA_COMPLETENESS_ROLES])
+  const loggedDatesByClinician = new Map<string, Set<string>>()
+  const nameByClinician = new Map<string, string>()
 
-  if (teamError) {
-    console.error('[getDataCompleteness] profiles', teamError.message)
-    return []
+  for (const row of rows) {
+    const clinicianId = String(row.clinician_id ?? '').trim()
+    if (!clinicianId) continue
+    const name = String(row.clinician_name ?? '').trim() || 'Unknown user'
+    const dateStr = String(row.log_date ?? '').slice(0, 10)
+    if (!dateStr || dateStr < startDate.slice(0, 10) || dateStr > endDate.slice(0, 10)) continue
+    if (!isUtcWeekdayIso(dateStr)) continue
+    nameByClinician.set(clinicianId, name)
+    if (!loggedDatesByClinician.has(clinicianId)) {
+      loggedDatesByClinician.set(clinicianId, new Set())
+    }
+    loggedDatesByClinician.get(clinicianId)!.add(dateStr)
   }
 
+  if (loggedDatesByClinician.size === 0) return []
+
   if (expected === 0) {
-    return (team ?? []).map((p) => {
-      const name = String(p.full_name ?? '').trim() || '—'
+    return Array.from(loggedDatesByClinician.keys()).map((clinicianId) => {
       return {
-        clinician_name: name,
+        clinician_name: nameByClinician.get(clinicianId) ?? 'Unknown user',
         expected_days: 0,
         logged_days: 0,
         missing_days: 0,
@@ -132,55 +130,15 @@ export async function getDataCompleteness(
     })
   }
 
-  const { data: logs, error: logsError } = await supabase
-    .from('activity_logs')
-    .select('clinician_id, log_date')
-    .gte('log_date', startDate.slice(0, 10))
-    .lte('log_date', endDate.slice(0, 10))
-
-  if (logsError) {
-    console.error('[getDataCompleteness] activity_logs', logsError.message)
-    return []
-  }
-
-  const logDatesByKey = new Map<string, Set<string>>()
-  for (const row of logs ?? []) {
-    const cid = row.clinician_id == null ? '' : String(row.clinician_id)
-    const dateStr = String(row.log_date ?? '').slice(0, 10)
-    if (!cid || !dateStr) continue
-    if (dateStr < startDate.slice(0, 10) || dateStr > endDate.slice(0, 10)) continue
-    if (!isUtcWeekdayIso(dateStr)) continue
-    if (!logDatesByKey.has(cid)) {
-      logDatesByKey.set(cid, new Set())
-    }
-    logDatesByKey.get(cid)!.add(dateStr)
-  }
-
-  const rows: DataCompletenessRow[] = []
-  for (const p of team ?? []) {
-    const name = String(p.full_name ?? '').trim() || '—'
-    const ids = new Set<string>()
-    ids.add(String(p.id))
-    if (p.clinician_id) {
-      ids.add(String(p.clinician_id))
-    }
-    const loggedDates = new Set<string>()
-    for (const cid of ids) {
-      const dates = logDatesByKey.get(cid)
-      if (dates) {
-        for (const d of dates) {
-          loggedDates.add(d)
-        }
-      }
-    }
-
+  const outputRows: DataCompletenessRow[] = []
+  for (const [clinicianId, loggedDates] of loggedDatesByClinician.entries()) {
     const logged_days = loggedDates.size
     const missing_days = Math.max(0, expected - logged_days)
     const completeness_pct =
       expected > 0 ? Math.round((logged_days / expected) * 1000) / 10 : 100
 
-    rows.push({
-      clinician_name: name,
+    outputRows.push({
+      clinician_name: nameByClinician.get(clinicianId) ?? 'Unknown user',
       expected_days: expected,
       logged_days,
       missing_days,
@@ -188,7 +146,7 @@ export async function getDataCompleteness(
     })
   }
 
-  return rows.sort(
+  return outputRows.sort(
     (a, b) =>
       a.completeness_pct - b.completeness_pct ||
       a.clinician_name.localeCompare(b.clinician_name),

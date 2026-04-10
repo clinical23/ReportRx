@@ -37,6 +37,13 @@ type Props = {
   dataCompleteness: DataCompletenessRow[]
 }
 
+function appointmentsTooltipFormatter(value: unknown): [string | number, string] {
+  if (Array.isArray(value)) {
+    return [String(value.join(', ')), 'Appointments']
+  }
+  return [typeof value === 'number' || typeof value === 'string' ? value : 0, 'Appointments']
+}
+
 function dataCompletenessClass(pct: number): 'good' | 'mid' | 'bad' {
   if (pct > 90) return 'good'
   if (pct >= 70) return 'mid'
@@ -339,9 +346,9 @@ export function ReportingDashboardClient({
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={byCategory} layout="vertical" margin={{ left: 20, right: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" />
+                  <XAxis type="number" label={{ value: 'Appointments', position: 'insideBottom', offset: -4 }} />
                   <YAxis type="category" dataKey="category_name" width={120} />
-                  <Tooltip />
+                  <Tooltip formatter={appointmentsTooltipFormatter} />
                   <Bar dataKey="total_count" fill="#0D9488" radius={[0, 6, 6, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -357,9 +364,9 @@ export function ReportingDashboardClient({
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={practiceChartData} layout="vertical" margin={{ left: 20, right: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" />
+                  <XAxis type="number" label={{ value: 'Appointments', position: 'insideBottom', offset: -4 }} />
                   <YAxis type="category" dataKey="practice_name" width={120} />
-                  <Tooltip />
+                  <Tooltip formatter={appointmentsTooltipFormatter} />
                   <Bar dataKey="total_count" radius={[0, 6, 6, 0]}>
                     {practiceChartData.map((entry) => (
                       <Cell key={entry.practice_name} fill={entry.fill} />
@@ -389,7 +396,7 @@ export function ReportingDashboardClient({
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
-                <Tooltip />
+                <Tooltip formatter={appointmentsTooltipFormatter} />
                 <Area type="monotone" dataKey="total_appointments" stroke="#0D9488" fill="url(#tealFill)" />
                 <Line type="monotone" dataKey="total_appointments" stroke="#0D9488" dot />
               </AreaChart>
