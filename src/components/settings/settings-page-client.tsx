@@ -7,7 +7,7 @@ import {
   type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react";
 
 import {
   archiveCategory,
@@ -51,11 +51,11 @@ function roleBadgeClass(role: string): string {
     case "manager":
     case "practice_manager":
     case "pcn_manager":
-      return "bg-blue-50 text-blue-800 ring-blue-200";
-    case "admin":
-      return "bg-violet-50 text-violet-800 ring-violet-200";
-    case "superadmin":
       return "bg-teal-50 text-teal-800 ring-teal-200";
+    case "admin":
+      return "bg-blue-50 text-blue-800 ring-blue-200";
+    case "superadmin":
+      return "bg-purple-50 text-purple-800 ring-purple-200";
     default:
       return "bg-slate-100 text-slate-700 ring-slate-200";
   }
@@ -132,7 +132,7 @@ export function SettingsPageClient({
     setOrgFlash(null);
     startTransition(async () => {
       const r = await updateOrganisation(fd);
-      setOrgFlash(r.success ? { message: "Organisation saved.", ok: true } : { message: r.error, ok: false });
+      setOrgFlash(r.success ? { message: "Settings saved", ok: true } : { message: r.error, ok: false });
       if (r.success) router.refresh();
     });
   };
@@ -146,7 +146,7 @@ export function SettingsPageClient({
       const r = await createCategory(fd);
       if (r.success) {
         setNewCatName("");
-        setCatFlash({ message: "Category added.", ok: true });
+        setCatFlash({ message: "Categories updated", ok: true });
         router.refresh();
       } else {
         setCatFlash({ message: r.error, ok: false });
@@ -161,7 +161,7 @@ export function SettingsPageClient({
     setCatFlash(null);
     startTransition(async () => {
       const r = await updateCategory(fd);
-      setCatFlash(r.success ? { message: "Category updated.", ok: true } : { message: r.error, ok: false });
+      setCatFlash(r.success ? { message: "Categories updated", ok: true } : { message: r.error, ok: false });
       if (r.success) router.refresh();
     });
   };
@@ -172,7 +172,7 @@ export function SettingsPageClient({
     setCatFlash(null);
     startTransition(async () => {
       const r = await archiveCategory(fd);
-      setCatFlash(r.success ? { message: "Category archived.", ok: true } : { message: r.error, ok: false });
+      setCatFlash(r.success ? { message: "Categories updated", ok: true } : { message: r.error, ok: false });
       if (r.success) router.refresh();
     });
   };
@@ -183,7 +183,7 @@ export function SettingsPageClient({
     setCatFlash(null);
     startTransition(async () => {
       const r = await unarchiveCategory(fd);
-      setCatFlash(r.success ? { message: "Category restored.", ok: true } : { message: r.error, ok: false });
+      setCatFlash(r.success ? { message: "Categories updated", ok: true } : { message: r.error, ok: false });
       if (r.success) router.refresh();
     });
   };
@@ -198,6 +198,7 @@ export function SettingsPageClient({
       if (!r.success) {
         setCatFlash({ message: r.error, ok: false });
       } else {
+        setCatFlash({ message: "Categories updated", ok: true });
         router.refresh();
       }
     });
@@ -208,7 +209,7 @@ export function SettingsPageClient({
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Profile and {isOrgAdmin ? "organisation " : ""}preferences.
+          Manage your organisation, practices and activity categories.
         </p>
       </div>
 
@@ -407,9 +408,12 @@ export function SettingsPageClient({
               ) : null}
 
               {initialCategories.length === 0 ? (
-                <p className="text-sm text-gray-600">
-                  No categories yet. Add one above.
-                </p>
+                <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+                  <SlidersHorizontal className="h-5 w-5 text-gray-400" />
+                  <p className="text-sm text-gray-600">
+                    No categories set up yet. Add your first activity category below.
+                  </p>
+                </div>
               ) : (
                 <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200">
                   {initialCategories.map((c, idx) => (

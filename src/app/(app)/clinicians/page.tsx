@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import { CliniciansView } from "@/components/clinicians/clinicians-view";
 import { getProfile, requireRole } from "@/lib/supabase/auth";
 import { listOrganisationTeamMembers } from "@/lib/supabase/data";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Team" };
 
 export default async function CliniciansPage() {
   const profile = await getProfile();

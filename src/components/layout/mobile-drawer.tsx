@@ -125,7 +125,7 @@ export function MobileDrawer({
         }`}
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-4">
-          <div className="flex items-center gap-3">
+          <Link href="/" onClick={onClose} className="flex items-center gap-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/30">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-600">
               <span className="text-sm font-bold text-white">Rx</span>
             </div>
@@ -136,7 +136,7 @@ export function MobileDrawer({
                 {practiceName}
               </p>
             </div>
-          </div>
+          </Link>
           <button
             type="button"
             onClick={onClose}
@@ -170,7 +170,7 @@ export function MobileDrawer({
                 {profile.full_name}
               </p>
               <p className="truncate text-xs text-gray-400">{profile.email}</p>
-              <span className="mt-0.5 inline-block rounded bg-teal-50 px-1.5 py-0.5 text-xs font-medium text-teal-700">
+              <span className="mt-0.5 inline-block rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
                 {roleLabels[profile.role] || profile.role}
               </span>
             </div>

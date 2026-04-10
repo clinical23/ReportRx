@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatDateUK } from "@/lib/datetime";
@@ -20,11 +21,11 @@ function roleBadgeClass(role: string): string {
     case "manager":
     case "practice_manager":
     case "pcn_manager":
-      return "bg-blue-50 text-blue-800 ring-blue-200";
-    case "admin":
-      return "bg-violet-50 text-violet-800 ring-violet-200";
-    case "superadmin":
       return "bg-teal-50 text-teal-800 ring-teal-200";
+    case "admin":
+      return "bg-blue-50 text-blue-800 ring-blue-200";
+    case "superadmin":
+      return "bg-purple-50 text-purple-800 ring-purple-200";
     default:
       return "bg-slate-100 text-slate-700 ring-slate-200";
   }
@@ -44,8 +45,7 @@ export function CliniciansView({ members }: Props) {
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Team</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Organisation members, roles, and recent activity. Invite new users
-            from Admin.
+            View and manage your clinical team members.
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:items-end">
@@ -72,11 +72,19 @@ export function CliniciansView({ members }: Props) {
 
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm md:hidden">
         {visible.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-gray-600">
-            {members.length === 0
-              ? "No team members in this organisation yet."
-              : "No team members match this filter."}
-          </p>
+          <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center">
+            <Users className="h-5 w-5 text-gray-400" />
+            <p className="text-sm text-gray-600">
+              {members.length === 0
+                ? "No team members yet. Invite your first clinician from the Admin page."
+                : "No team members match this filter."}
+            </p>
+            {members.length === 0 ? (
+              <Link href="/admin" className="text-sm font-medium text-teal-700 hover:underline">
+                Go to Admin
+              </Link>
+            ) : null}
+          </div>
         ) : (
           <div className="space-y-3 p-3">
             {visible.map((row) => (
@@ -101,7 +109,7 @@ export function CliniciansView({ members }: Props) {
                       Active
                     </span>
                   ) : (
-                    <span className="inline-flex rounded-full bg-red-50 px-2 py-0.5 font-medium text-red-800 ring-1 ring-red-200 ring-inset">
+                    <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800 ring-1 ring-amber-200 ring-inset">
                       Inactive
                     </span>
                   )}
@@ -116,11 +124,19 @@ export function CliniciansView({ members }: Props) {
 
       <div className="hidden min-w-0 overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm md:block">
         {visible.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-gray-600">
-            {members.length === 0
-              ? "No team members in this organisation yet."
-              : "No team members match this filter."}
-          </p>
+          <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center">
+            <Users className="h-5 w-5 text-gray-400" />
+            <p className="text-sm text-gray-600">
+              {members.length === 0
+                ? "No team members yet. Invite your first clinician from the Admin page."
+                : "No team members match this filter."}
+            </p>
+            {members.length === 0 ? (
+              <Link href="/admin" className="text-sm font-medium text-teal-700 hover:underline">
+                Go to Admin
+              </Link>
+            ) : null}
+          </div>
         ) : (
           <table className="w-full min-w-[44rem] text-sm">
             <thead>
@@ -173,7 +189,7 @@ export function CliniciansView({ members }: Props) {
                         Active
                       </span>
                     ) : (
-                      <span className="inline-flex rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-800 ring-1 ring-red-200 ring-inset">
+                      <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-amber-200 ring-inset">
                         Inactive
                       </span>
                     )}

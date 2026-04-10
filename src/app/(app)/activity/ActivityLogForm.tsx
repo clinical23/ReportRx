@@ -208,7 +208,13 @@ export default function ActivityLogForm({
         entries: buildEntries(counts),
       });
       if (result.success) {
-        setMessage({ type: "success", text: "Activity log saved." });
+        const practiceName =
+          scopedPractices.find((practice) => practice.id === practiceId)?.name ??
+          "selected practice";
+        setMessage({
+          type: "success",
+          text: `Activity saved for ${logDate} at ${practiceName}`,
+        });
         setCounts({});
       } else {
         setMessage({ type: "error", text: result.error });

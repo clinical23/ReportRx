@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { ClipboardList } from "lucide-react";
 
 import { editActivityLog } from '@/app/actions/activity'
 import {
@@ -88,7 +89,12 @@ export default function RecentLogs({
           <CardTitle className="text-base">Recent entries</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-600">No activity logged yet.</p>
+          <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+            <ClipboardList className="h-5 w-5 text-gray-400" />
+            <p className="text-sm text-gray-600">
+              No recent logs. Start by selecting a practice and logging today&apos;s activity.
+            </p>
+          </div>
         </CardContent>
       </Card>
     )

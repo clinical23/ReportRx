@@ -34,8 +34,10 @@ import {
   getMyStats,
 } from "@/lib/supabase/reporting";
 import { cn } from "@/lib/utils";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Dashboard" };
 
 function StatTile({
   label,
@@ -230,9 +232,15 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             {myRecent.length === 0 ? (
-              <p className="text-sm text-gray-600">
-                You haven&apos;t logged activity this month yet.
-              </p>
+              <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+                <FileStack className="h-5 w-5 text-gray-400" />
+                <p className="text-sm text-gray-600">
+                  No activity logged yet. Head to the Activity page to log your first entry.
+                </p>
+                <Link href="/activity" className="text-sm font-medium text-teal-700 hover:underline">
+                  Go to Activity
+                </Link>
+              </div>
             ) : (
               <div className="flex flex-col gap-2">
                 {myRecent.map((log, idx) => (
@@ -383,9 +391,15 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           {snap.recentEntries.length === 0 ? (
-            <p className="text-sm text-gray-600">
-              No activity logged yet this month.
-            </p>
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+              <FileStack className="h-5 w-5 text-gray-400" />
+              <p className="text-sm text-gray-600">
+                No activity logged yet. Head to the Activity page to log your first entry.
+              </p>
+              <Link href="/activity" className="text-sm font-medium text-teal-700 hover:underline">
+                Go to Activity
+              </Link>
+            </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-200">
               <table className="w-full min-w-[36rem] text-sm">

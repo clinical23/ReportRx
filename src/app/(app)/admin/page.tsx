@@ -12,13 +12,16 @@ import {
   listPractices,
   listTeamMembers,
 } from '@/lib/supabase/admin'
+import { Users } from "lucide-react";
+import type { Metadata } from "next";
 
 export const dynamic = 'force-dynamic'
+export const metadata: Metadata = { title: "Admin" };
 
 const roleBadgeClasses: Record<string, string> = {
   clinician: 'bg-slate-100 text-slate-700 border border-slate-200',
-  manager: 'bg-blue-50 text-blue-700 border border-blue-200',
-  admin: 'bg-teal-50 text-teal-700 border border-teal-200',
+  manager: 'bg-teal-50 text-teal-700 border border-teal-200',
+  admin: 'bg-blue-50 text-blue-700 border border-blue-200',
   superadmin: 'bg-purple-50 text-purple-700 border border-purple-200',
 }
 
@@ -51,7 +54,7 @@ export default async function AdminPage({
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h1 className="text-2xl font-semibold text-gray-900">Admin</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Manage organisations, teams, and invitations for ReportRx.
+          Organisation administration, team management and invitations.
         </p>
       </div>
 
@@ -201,18 +204,26 @@ export default async function AdminPage({
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Team Members</h2>
 
         <div className="overflow-x-auto rounded-xl border border-gray-200">
-          <table className="w-full min-w-[40rem] text-sm">
-            <thead className="bg-gray-50">
-              <tr className="text-left text-gray-600">
-                <th className="px-4 py-2.5 font-medium">Name</th>
-                <th className="px-4 py-2.5 font-medium">Email</th>
-                <th className="px-4 py-2.5 font-medium">Role</th>
-                <th className="px-4 py-2.5 font-medium">Status</th>
-                <th className="px-4 py-2.5 font-medium">Update Role</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teamMembers.map((member) => (
+          {teamMembers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center">
+              <Users className="h-5 w-5 text-gray-400" />
+              <p className="text-sm text-gray-600">
+                No team members yet. Use the invite form below to add your first.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full min-w-[40rem] text-sm">
+              <thead className="bg-gray-50">
+                <tr className="text-left text-gray-600">
+                  <th className="px-4 py-2.5 font-medium">Name</th>
+                  <th className="px-4 py-2.5 font-medium">Email</th>
+                  <th className="px-4 py-2.5 font-medium">Role</th>
+                  <th className="px-4 py-2.5 font-medium">Status</th>
+                  <th className="px-4 py-2.5 font-medium">Update Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teamMembers.map((member) => (
                 <tr key={member.id} className="border-t border-gray-100">
                   <td className="px-4 py-2.5 text-gray-900">{member.full_name || '—'}</td>
                   <td className="px-4 py-2.5 text-gray-600">{member.email || '—'}</td>
@@ -230,7 +241,7 @@ export default async function AdminPage({
                       className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                         member.is_active
                           ? 'border border-green-200 bg-green-50 text-green-700'
-                          : 'border border-gray-200 bg-gray-50 text-gray-600'
+                          : 'border border-amber-200 bg-amber-50 text-amber-700'
                       }`}
                     >
                       {member.is_active ? 'Active' : 'Inactive'}
@@ -260,9 +271,10 @@ export default async function AdminPage({
                     </form>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
         {profile.role !== 'superadmin' ? (
           <p className="mt-3 text-xs text-gray-500">

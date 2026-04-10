@@ -19,8 +19,10 @@ import { listClinicians } from '@/lib/supabase/data'
 import ActivityLogForm from './ActivityLogForm'
 import MyWeekStrip from '@/components/my-week-strip'
 import RecentLogs from './RecentLogs'
+import type { Metadata } from "next";
 
 export const dynamic = 'force-dynamic'
+export const metadata: Metadata = { title: "Activity" };
 
 export default async function ActivityPage() {
   try {

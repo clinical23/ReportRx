@@ -54,7 +54,7 @@ export default function AppSidebar({
   return (
     <aside className="flex min-h-screen w-60 shrink-0 flex-col border-r border-gray-200 bg-white">
       <div className="border-b border-gray-100 px-5 py-5">
-        <div className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/30">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-600">
             <span className="text-sm font-bold text-white">Rx</span>
           </div>
@@ -65,7 +65,7 @@ export default function AppSidebar({
               {practiceName}
             </p>
           </div>
-        </div>
+        </Link>
       </div>
 
       <nav className="flex-1 px-3 py-4" aria-label="Main navigation">
@@ -104,7 +104,7 @@ export default function AppSidebar({
               {profile.full_name}
             </p>
             <p className="truncate text-xs text-gray-400">{profile.email}</p>
-            <span className="mt-0.5 inline-block rounded bg-teal-50 px-1.5 py-0.5 text-xs font-medium text-teal-700">
+            <span className="mt-0.5 inline-block rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
               {roleLabels[profile.role] || profile.role}
             </span>
           </div>

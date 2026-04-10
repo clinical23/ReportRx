@@ -17,7 +17,10 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ReportRx",
+  title: {
+    default: "ReportRx",
+    template: "%s | ReportRx",
+  },
   description: "Practice operations dashboard",
 };
 

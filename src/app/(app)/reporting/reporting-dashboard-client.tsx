@@ -24,6 +24,7 @@ import type {
   RecentLogItem,
   ReportingSummary,
 } from '@/lib/supabase/reporting'
+import { BarChart3 } from "lucide-react";
 
 type Props = {
   startDate: string
@@ -175,7 +176,7 @@ export function ReportingDashboardClient({
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">Reporting</h1>
         <p className="text-sm text-gray-500">
-          {startDate} to {endDate}
+          Analyse activity data across your organisation with filters, charts and exports.
         </p>
       </div>
 
@@ -226,6 +227,17 @@ export function ReportingDashboardClient({
           <p className="mt-1 text-3xl font-bold text-teal-600">{summary.avgAppointmentsPerDay.toLocaleString()}</p>
         </div>
       </div>
+
+      {summary.totalAppointments === 0 ? (
+        <div className="rounded-xl border border-gray-200 bg-white p-6 text-center shadow-sm md:p-8">
+          <div className="mx-auto flex w-fit items-center justify-center rounded-full bg-gray-100 p-2">
+            <BarChart3 className="h-5 w-5 text-gray-500" />
+          </div>
+          <p className="mt-3 text-sm text-gray-600">
+            No activity data for this period. Try selecting a wider date range.
+          </p>
+        </div>
+      ) : null}
 
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

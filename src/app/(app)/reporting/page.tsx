@@ -9,8 +9,10 @@ import {
   getReportingSummary,
 } from '@/lib/supabase/reporting'
 import { ReportingDashboardClient } from './reporting-dashboard-client'
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Reporting" };
 
 export default async function ReportingPage({
   searchParams,
