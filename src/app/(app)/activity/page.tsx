@@ -7,6 +7,7 @@ import {
 import {
   listPractices,
   listActivityCategories,
+  getMyWeekStatus,
   listRecentLogsGrouped,
 } from "@/lib/supabase/activity";
 import {
@@ -16,6 +17,7 @@ import {
 import { getPracticeScopeIdsForSession } from '@/lib/supabase/practice-scope'
 import { listClinicians } from '@/lib/supabase/data'
 import ActivityLogForm from './ActivityLogForm'
+import MyWeekStrip from '@/components/my-week-strip'
 import RecentLogs from './RecentLogs'
 
 export const dynamic = 'force-dynamic'
@@ -51,12 +53,13 @@ export default async function ActivityPage() {
       ? getOrganisationSettingsRecord(profileOrgId)
       : Promise.resolve(null)
 
-    const [clinicians, practices, categories, recentLogs, orgRecord] =
+    const [clinicians, practices, categories, recentLogs, weekStatus, orgRecord] =
       await Promise.all([
         listClinicians(),
         listPractices(),
         listActivityCategories(),
         listRecentLogsGrouped(10, scope),
+        profileOrgId && profile?.id ? getMyWeekStatus(profile.id, profileOrgId) : Promise.resolve([]),
         orgRecordPromise,
       ])
 
@@ -87,6 +90,8 @@ export default async function ActivityPage() {
             Your profile row is missing. Ask an administrator to run the profiles migration or create a profile for your account in Supabase.
           </div>
         ) : null}
+
+        {weekStatus.length > 0 ? <MyWeekStrip days={weekStatus} /> : null}
 
         <ActivityLogForm
           clinicians={clinicians}

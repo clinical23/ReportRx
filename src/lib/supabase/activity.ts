@@ -1,6 +1,7 @@
 import {
   isIsoDateInLondonMonth,
   isIsoDateInRange,
+  todayISOInLondon,
 } from '@/lib/datetime'
 import { getProfile } from '@/lib/supabase/auth'
 import { createClient } from '@/lib/supabase/server'
@@ -36,6 +37,105 @@ type ActivityLogEditRow = {
   old_value: string | null
   new_value: string | null
   reason: string | null
+}
+
+export type MyWeekStatusItem = {
+  date: string
+  dayName: 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri'
+  status: 'logged' | 'missing' | 'today' | 'future'
+  practiceCount: number
+  totalAppointments: number
+}
+
+function addDaysIso(isoDate: string, days: number): string {
+  const d = new Date(`${isoDate}T12:00:00`)
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+function getLondonWeekMonday(todayIso: string): string {
+  const d = new Date(`${todayIso}T12:00:00`)
+  const day = d.getDay() // 0 Sun ... 6 Sat
+  const offset = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + offset)
+  return d.toISOString().slice(0, 10)
+}
+
+export async function getMyWeekStatus(
+  userId: string,
+  organisationId: string,
+): Promise<MyWeekStatusItem[]> {
+  const supabase = await createClient()
+  const todayIso = todayISOInLondon()
+  const monday = getLondonWeekMonday(todayIso)
+  const dates = [0, 1, 2, 3, 4].map((i) => addDaysIso(monday, i))
+  const friday = dates[4]
+
+  const { data: logs, error: logsError } = await supabase
+    .from('activity_logs')
+    .select('id, log_date, practice_id')
+    .eq('clinician_id', userId)
+    .eq('organisation_id', organisationId)
+    .gte('log_date', monday)
+    .lte('log_date', friday)
+
+  if (logsError) {
+    console.error('[getMyWeekStatus.logs]', logsError.message)
+    return dates.map((date, idx) => ({
+      date,
+      dayName: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][idx] as MyWeekStatusItem['dayName'],
+      status: date === todayIso ? 'today' : date > todayIso ? 'future' : 'missing',
+      practiceCount: 0,
+      totalAppointments: 0,
+    }))
+  }
+
+  const logIds = (logs ?? []).map((l) => String(l.id))
+  const { data: entries, error: entriesError } = logIds.length
+    ? await supabase
+        .from('activity_log_entries')
+        .select('log_id, count')
+        .in('log_id', logIds)
+    : { data: [], error: null }
+
+  if (entriesError) {
+    console.error('[getMyWeekStatus.entries]', entriesError.message)
+  }
+
+  const apptsByLogId = new Map<string, number>()
+  for (const row of entries ?? []) {
+    const id = String(row.log_id)
+    apptsByLogId.set(id, (apptsByLogId.get(id) ?? 0) + Number(row.count ?? 0))
+  }
+
+  const byDate = new Map<string, { practiceIds: Set<string>; appointments: number }>()
+  for (const log of logs ?? []) {
+    const date = String(log.log_date).slice(0, 10)
+    if (!byDate.has(date)) {
+      byDate.set(date, { practiceIds: new Set<string>(), appointments: 0 })
+    }
+    const day = byDate.get(date)!
+    day.practiceIds.add(String(log.practice_id))
+    day.appointments += apptsByLogId.get(String(log.id)) ?? 0
+  }
+
+  return dates.map((date, idx) => {
+    const dayName = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][idx] as MyWeekStatusItem['dayName']
+    const aggregate = byDate.get(date)
+    const hasLog = Boolean(aggregate)
+    let status: MyWeekStatusItem['status']
+    if (date > todayIso) status = 'future'
+    else if (date === todayIso) status = 'today'
+    else status = hasLog ? 'logged' : 'missing'
+
+    return {
+      date,
+      dayName,
+      status,
+      practiceCount: aggregate?.practiceIds.size ?? 0,
+      totalAppointments: aggregate?.appointments ?? 0,
+    }
+  })
 }
 
 export async function listPractices(): Promise<Practice[]> {
