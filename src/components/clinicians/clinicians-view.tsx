@@ -70,7 +70,51 @@ export function CliniciansView({ members }: Props) {
         </label>
       </div>
 
-      <div className="min-w-0 overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm md:hidden">
+        {visible.length === 0 ? (
+          <p className="px-4 py-10 text-center text-sm text-gray-600">
+            {members.length === 0
+              ? "No team members in this organisation yet."
+              : "No team members match this filter."}
+          </p>
+        ) : (
+          <div className="space-y-3 p-3">
+            {visible.map((row) => (
+              <div key={row.id} className="rounded-xl border border-gray-200 bg-white p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-gray-900">{row.full_name}</p>
+                    <p className="truncate text-sm text-gray-600">{row.email}</p>
+                  </div>
+                  <span
+                    className={cn(
+                      "inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
+                      roleBadgeClass(row.role),
+                    )}
+                  >
+                    {formatRoleLabel(row.role)}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                  {row.is_active ? (
+                    <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800 ring-1 ring-emerald-200 ring-inset">
+                      Active
+                    </span>
+                  ) : (
+                    <span className="inline-flex rounded-full bg-red-50 px-2 py-0.5 font-medium text-red-800 ring-1 ring-red-200 ring-inset">
+                      Inactive
+                    </span>
+                  )}
+                  <span>Last: {row.last_activity_date ? formatDateUK(row.last_activity_date) : "Never"}</span>
+                </div>
+                <p className="mt-2 text-xs text-gray-600">Practices: {row.practices_label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden min-w-0 overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm md:block">
         {visible.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-gray-600">
             {members.length === 0

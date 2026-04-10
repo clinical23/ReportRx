@@ -271,7 +271,7 @@ export function SettingsPageClient({
             <Button
               type="submit"
               disabled={pending}
-              className="bg-teal-600 text-white hover:bg-teal-700"
+              className="min-h-11 w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto sm:min-h-0"
             >
               Save profile
             </Button>
@@ -358,7 +358,7 @@ export function SettingsPageClient({
                 <Button
                   type="submit"
                   disabled={pending}
-                  className="bg-teal-600 text-white hover:bg-teal-700"
+                  className="min-h-11 w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto sm:min-h-0"
                 >
                   Save organisation
                 </Button>
@@ -391,7 +391,7 @@ export function SettingsPageClient({
                 <Button
                   type="submit"
                   disabled={pending || !newCatName.trim()}
-                  className="shrink-0 bg-teal-600 text-white hover:bg-teal-700"
+                  className="min-h-11 w-full shrink-0 bg-teal-600 text-white hover:bg-teal-700 sm:w-auto sm:min-h-0"
                 >
                   Add category
                 </Button>
@@ -422,7 +422,7 @@ export function SettingsPageClient({
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-11 w-11 md:h-8 md:w-8"
                           disabled={pending || idx === 0}
                           onClick={() => doReorder(c.id, "up")}
                           aria-label={`Move ${c.name} up`}
@@ -433,7 +433,7 @@ export function SettingsPageClient({
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-11 w-11 md:h-8 md:w-8"
                           disabled={pending || idx >= initialCategories.length - 1}
                           onClick={() => doReorder(c.id, "down")}
                           aria-label={`Move ${c.name} down`}

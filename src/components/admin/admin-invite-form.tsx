@@ -98,7 +98,7 @@ export function AdminInviteForm({ organisationId, allowAdminRole }: Props) {
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-lg bg-teal-600 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-teal-700 disabled:opacity-60 md:w-auto md:py-2.5 md:text-sm"
+            className="min-h-11 w-full rounded-lg bg-teal-600 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-teal-700 disabled:opacity-60 md:min-h-0 md:w-auto md:py-2.5 md:text-sm"
           >
             {pending ? "Sending…" : "Invite user"}
           </button>

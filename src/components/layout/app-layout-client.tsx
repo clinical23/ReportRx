@@ -60,7 +60,7 @@ export function AppLayoutClient({
       />
 
       <main className="min-w-0 w-full flex-1 overflow-auto pt-14 md:pt-0">
-        <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">{children}</div>
       </main>
     </div>
   );

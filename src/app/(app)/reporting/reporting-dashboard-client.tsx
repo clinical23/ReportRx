@@ -95,14 +95,14 @@ function DateFilter({ startDate, endDate }: { startDate: string; endDate: string
             key={preset.label}
             type="button"
             onClick={() => applyRange(preset.start, preset.end)}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 md:py-1.5"
+            className="min-h-11 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 md:min-h-0 md:py-1.5"
           >
             {preset.label}
           </button>
         ))}
       </div>
       <form
-        className="mt-3 flex flex-wrap items-end gap-3"
+        className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 md:flex md:flex-wrap md:items-end"
         onSubmit={(e) => {
           e.preventDefault()
           const form = new FormData(e.currentTarget)
@@ -131,7 +131,7 @@ function DateFilter({ startDate, endDate }: { startDate: string; endDate: string
         </div>
         <button
           type="submit"
-          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+          className="min-h-11 w-full rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 sm:col-span-2 md:min-h-0 md:w-auto"
         >
           Apply
         </button>
@@ -208,7 +208,7 @@ export function ReportingDashboardClient({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
           <p className="text-sm text-gray-500">Total appointments</p>
           <p className="mt-1 text-3xl font-bold text-teal-600">{summary.totalAppointments.toLocaleString()}</p>
@@ -344,10 +344,10 @@ export function ReportingDashboardClient({
           ) : (
             <div className="h-[300px] md:h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={byCategory} layout="vertical" margin={{ left: 20, right: 20 }}>
+                <BarChart data={byCategory} layout="vertical" margin={{ left: 8, right: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" label={{ value: 'Appointments', position: 'insideBottom', offset: -4 }} />
-                  <YAxis type="category" dataKey="category_name" width={120} />
+                  <YAxis type="category" dataKey="category_name" width={96} />
                   <Tooltip formatter={appointmentsTooltipFormatter} />
                   <Bar dataKey="total_count" fill="#0D9488" radius={[0, 6, 6, 0]} />
                 </BarChart>
@@ -362,10 +362,10 @@ export function ReportingDashboardClient({
           ) : (
             <div className="h-[300px] md:h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={practiceChartData} layout="vertical" margin={{ left: 20, right: 20 }}>
+                <BarChart data={practiceChartData} layout="vertical" margin={{ left: 8, right: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" label={{ value: 'Appointments', position: 'insideBottom', offset: -4 }} />
-                  <YAxis type="category" dataKey="practice_name" width={120} />
+                  <YAxis type="category" dataKey="practice_name" width={96} />
                   <Tooltip formatter={appointmentsTooltipFormatter} />
                   <Bar dataKey="total_count" radius={[0, 6, 6, 0]}>
                     {practiceChartData.map((entry) => (

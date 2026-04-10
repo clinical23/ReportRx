@@ -50,19 +50,24 @@ export default function MyWeekStrip({ days }: { days: MyWeekStatusItem[] }) {
         <h2 className="text-sm font-semibold text-gray-900">My Week</h2>
         <p className="text-xs text-gray-500">Mon - Fri status</p>
       </div>
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
         {days.map((day) => (
           <div
             key={day.date}
-            className={`rounded-lg border p-2 text-center ${cardClass(day)}`}
+            className={`rounded-lg border px-1.5 py-2 text-center sm:px-2 ${cardClass(day)}`}
           >
             <div className="flex items-center justify-center gap-1 text-[11px] font-semibold">
-              <span>{day.dayName}</span>
+              <span className="sm:hidden">{day.dayName[0]}</span>
+              <span className="hidden sm:inline">{day.dayName}</span>
               <StatusIcon day={day} />
             </div>
-            <p className="mt-0.5 text-xs">{shortDate(day.date)}</p>
-            <p className="mt-1 text-[11px] font-medium">
-              {day.totalAppointments > 0 ? `${day.totalAppointments} appts` : day.status === 'future' ? 'Future' : 'No log'}
+            <p className="mt-0.5 text-[11px] sm:text-xs">{shortDate(day.date)}</p>
+            <p className="mt-1 text-[10px] font-medium sm:text-[11px]">
+              {day.totalAppointments > 0
+                ? `${day.totalAppointments} appts`
+                : day.status === 'future'
+                  ? 'Future'
+                  : 'No log'}
             </p>
           </div>
         ))}

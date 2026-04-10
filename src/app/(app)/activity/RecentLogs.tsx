@@ -258,7 +258,7 @@ export default function RecentLogs({
 
       {activeEditLog ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-5 shadow-xl">
+          <div className="h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-200 bg-white p-4 shadow-xl sm:h-auto sm:max-h-[90vh] sm:p-5">
             <h3 className="text-lg font-semibold text-gray-900">Edit activity log</h3>
             <p className="mt-1 text-sm text-gray-500">
               {activeEditLog.clinician_name} · {formatDateMediumUK(activeEditLog.log_date)}
@@ -307,11 +307,11 @@ export default function RecentLogs({
               </label>
             </div>
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="sticky bottom-0 mt-5 flex justify-end gap-2 border-t border-gray-100 bg-white pt-3">
               <button
                 type="button"
                 onClick={() => setEditingLogId(null)}
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                className="min-h-11 rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
                 Cancel
               </button>
@@ -319,7 +319,7 @@ export default function RecentLogs({
                 type="button"
                 disabled={isPending}
                 onClick={saveEdit}
-                className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
+                className="min-h-11 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
               >
                 {isPending ? 'Saving...' : 'Save'}
               </button>
@@ -330,13 +330,13 @@ export default function RecentLogs({
 
       {activeHistoryLog ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-5 shadow-xl">
+          <div className="h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-200 bg-white p-4 shadow-xl sm:h-auto sm:max-h-[90vh] sm:p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Edit history</h3>
               <button
                 type="button"
                 onClick={() => setHistoryLogId(null)}
-                className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                className="min-h-11 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
               >
                 Close
               </button>
