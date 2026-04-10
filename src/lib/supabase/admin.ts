@@ -1,5 +1,20 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
+
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import type { Profile } from '@/lib/supabase/auth'
+
+/** Service-role client for server-only admin operations (never import in client code). */
+export function createAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
+}
 
 export type AdminOrganisation = {
   id: string
@@ -30,7 +45,7 @@ export type AdminTeamMember = {
 }
 
 export async function listOrganisations(profile: Profile): Promise<AdminOrganisation[]> {
-  const supabase = await createClient()
+  const supabase = await createServerClient()
   if (profile.role === 'superadmin') {
     const { data } = await supabase
       .from('organisations')
@@ -47,7 +62,7 @@ export async function listOrganisations(profile: Profile): Promise<AdminOrganisa
 }
 
 export async function listPCNs(organisationId: string): Promise<AdminPCN[]> {
-  const supabase = await createClient()
+  const supabase = await createServerClient()
   const { data } = await supabase
     .from('pcns')
     .select('id, name, organisation_id')
@@ -58,7 +73,7 @@ export async function listPCNs(organisationId: string): Promise<AdminPCN[]> {
 }
 
 export async function listPractices(organisationId: string): Promise<AdminPractice[]> {
-  const supabase = await createClient()
+  const supabase = await createServerClient()
   const [{ data: practices }, { data: pcns }] = await Promise.all([
     supabase
       .from('practices')
@@ -88,7 +103,7 @@ export async function listPractices(organisationId: string): Promise<AdminPracti
 }
 
 export async function listTeamMembers(organisationId: string): Promise<AdminTeamMember[]> {
-  const supabase = await createClient()
+  const supabase = await createServerClient()
   const { data } = await supabase
     .from('profiles')
     .select('id, full_name, email, role, is_active')

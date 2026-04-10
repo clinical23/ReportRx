@@ -25,7 +25,8 @@ export default function OnboardingPage() {
         .eq('id', user.id)
         .single()
 
-      if (profile?.full_name && profile?.organisation_id) {
+      const nameOk = Boolean(profile?.full_name?.trim())
+      if (nameOk && profile?.organisation_id) {
         // Fully set up — go to dashboard
         router.push('/')
         return

@@ -275,7 +275,7 @@ export default async function AdminPage({
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Invite User</h2>
         <AdminInviteForm
           organisationId={currentOrgId}
-          isSuperadmin={profile.role === 'superadmin'}
+          allowAdminRole={profile.role === 'superadmin'}
         />
       </section>
     </div>

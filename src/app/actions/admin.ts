@@ -3,20 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-import { createAnonAuthClient } from '@/lib/supabase/anon-server'
 import { requireRole } from '@/lib/supabase/auth'
 import { createClient } from '@/lib/supabase/server'
 
 function redirectAdminError(message: string): never {
   redirect(`/admin?error=${encodeURIComponent(message)}`)
-}
-
-function appOrigin(): string {
-  const base =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-    'http://localhost:3000'
-  return base.replace(/\/$/, '')
 }
 
 // Create a new organisation (superadmin only)
@@ -81,118 +72,6 @@ export async function createPractice(formData: FormData): Promise<void> {
   if (error) redirectAdminError(error.message)
 
   revalidatePath('/admin')
-}
-
-export type InviteUserResult =
-  | { success: true; message: string }
-  | { success: false; error: string }
-
-// Record a pending invite and optionally send a magic link (anon key only — no service role).
-export async function inviteUser(formData: FormData): Promise<InviteUserResult> {
-  const profile = await requireRole('superadmin', 'admin')
-  const supabase = await createClient()
-
-  const email = (formData.get('email') as string)?.trim().toLowerCase()
-  const role = (formData.get('role') as string)?.trim()
-  const fullName = (formData.get('full_name') as string)?.trim()
-  const organisationId = (formData.get('organisation_id') as string)?.trim()
-
-  const orgId =
-    profile.role === 'superadmin' ? organisationId || profile.organisation_id : profile.organisation_id
-
-  if (!email || !orgId) {
-    return { success: false, error: 'Email and organisation are required' }
-  }
-
-  if (!fullName) {
-    return { success: false, error: 'Full name is required' }
-  }
-
-  if (!role) {
-    return { success: false, error: 'Please select a role' }
-  }
-
-  const allowedRoles =
-    profile.role === 'superadmin'
-      ? ['clinician', 'manager', 'admin', 'superadmin']
-      : ['clinician', 'manager']
-
-  if (!allowedRoles.includes(role)) {
-    return { success: false, error: 'You cannot assign that role' }
-  }
-
-  const { data: existingProfile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('email', email)
-    .maybeSingle()
-
-  if (existingProfile) {
-    return { success: false, error: 'A user with that email already exists' }
-  }
-
-  await supabase.from('organisation_invites').delete().eq('email', email)
-
-  const { error: inviteRowError } = await supabase.from('organisation_invites').insert({
-    email,
-    organisation_id: orgId,
-    role,
-    full_name: fullName,
-    invited_by: profile.id,
-  })
-
-  if (inviteRowError) {
-    console.error('[inviteUser] organisation_invites', inviteRowError.message)
-    if (inviteRowError.code === '42P01') {
-      return {
-        success: false,
-        error:
-          'Invites table is not installed. Apply migration 20260410300000_organisation_invites.sql in Supabase.',
-      }
-    }
-    return { success: false, error: inviteRowError.message }
-  }
-
-  const origin = appOrigin()
-  const redirectTo = `${origin}/auth/callback?next=/onboarding`
-
-  try {
-    const anon = createAnonAuthClient()
-    const { error: otpError } = await anon.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: redirectTo },
-    })
-    if (otpError) {
-      console.warn('[inviteUser] signInWithOtp:', otpError.message)
-    }
-  } catch (e) {
-    console.warn('[inviteUser] OTP client error', e)
-  }
-
-  revalidatePath('/admin')
-
-  const loginUrl = `${origin}/login`
-  return {
-    success: true,
-    message: `User profile created. Send them this login link: ${loginUrl} — they can sign in with their email and will be connected to your organisation once they complete magic link sign-in.`,
-  }
-}
-
-export type InviteFormState = {
-  ok: boolean
-  message: string
-  error: string
-}
-
-export async function inviteUserFormAction(
-  _prev: InviteFormState,
-  formData: FormData,
-): Promise<InviteFormState> {
-  const result = await inviteUser(formData)
-  if (result.success) {
-    return { ok: true, message: result.message, error: '' }
-  }
-  return { ok: false, message: '', error: result.error }
 }
 
 // Transfer admin — promote a user to admin or superadmin (superadmin only)
