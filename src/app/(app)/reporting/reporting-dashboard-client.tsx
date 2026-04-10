@@ -7,7 +7,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -22,6 +21,8 @@ import type {
   DataCompletenessRow,
   PracticeBreakdownItem,
   RecentLogItem,
+  ReportingPcnOption,
+  ReportingPracticeOption,
   ReportingSummary,
 } from '@/lib/supabase/reporting'
 import { BarChart3 } from "lucide-react";
@@ -29,6 +30,10 @@ import { BarChart3 } from "lucide-react";
 type Props = {
   startDate: string
   endDate: string
+  pcns: ReportingPcnOption[]
+  practices: ReportingPracticeOption[]
+  selectedPcnId: string | null
+  selectedPracticeId: string | null
   summary: ReportingSummary
   byCategory: CategoryBreakdownItem[]
   byPractice: PracticeBreakdownItem[]
@@ -51,10 +56,52 @@ function dataCompletenessClass(pct: number): 'good' | 'mid' | 'bad' {
   return 'bad'
 }
 
-function DateFilter({ startDate, endDate }: { startDate: string; endDate: string }) {
+const selectClass =
+  'w-full min-h-11 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm md:min-h-0'
+
+function ReportingFilters({
+  startDate,
+  endDate,
+  pcns,
+  practices,
+  selectedPcnId,
+  selectedPracticeId,
+}: {
+  startDate: string
+  endDate: string
+  pcns: ReportingPcnOption[]
+  practices: ReportingPracticeOption[]
+  selectedPcnId: string | null
+  selectedPracticeId: string | null
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+
+  const visiblePractices = useMemo(() => {
+    if (!selectedPcnId) return practices
+    return practices.filter((p) => p.pcn_id === selectedPcnId)
+  }, [practices, selectedPcnId])
+
+  const pushParams = (next: URLSearchParams) => {
+    const q = next.toString()
+    router.push(q ? `${pathname}?${q}` : pathname)
+  }
+
+  const setPcn = (pcn: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (pcn) params.set('pcn', pcn)
+    else params.delete('pcn')
+    params.delete('practice')
+    pushParams(params)
+  }
+
+  const setPractice = (practice: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (practice) params.set('practice', practice)
+    else params.delete('practice')
+    pushParams(params)
+  }
 
   const today = new Date()
   const y = today.getFullYear()
@@ -85,12 +132,55 @@ function DateFilter({ startDate, endDate }: { startDate: string; endDate: string
     const params = new URLSearchParams(searchParams.toString())
     params.set('start', start)
     params.set('end', end)
-    router.push(`${pathname}?${params.toString()}`)
+    pushParams(params)
   }
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
-      <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-1">
+          <label htmlFor="report-pcn" className="text-xs text-gray-500">
+            PCN
+          </label>
+          <select
+            id="report-pcn"
+            className={selectClass}
+            value={selectedPcnId ?? ''}
+            onChange={(e) => setPcn(e.target.value)}
+          >
+            <option value="">All PCNs</option>
+            {pcns.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="grid gap-1">
+          <label htmlFor="report-practice" className="text-xs text-gray-500">
+            Practice
+          </label>
+          <select
+            id="report-practice"
+            key={selectedPcnId ?? 'all'}
+            className={selectClass}
+            value={
+              visiblePractices.some((p) => p.id === selectedPracticeId)
+                ? (selectedPracticeId ?? '')
+                : ''
+            }
+            onChange={(e) => setPractice(e.target.value)}
+          >
+            <option value="">All practices</option>
+            {visiblePractices.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2 md:flex md:flex-wrap">
         {presets.map((preset) => (
           <button
             key={preset.label}
@@ -144,6 +234,10 @@ function DateFilter({ startDate, endDate }: { startDate: string; endDate: string
 export function ReportingDashboardClient({
   startDate,
   endDate,
+  pcns,
+  practices,
+  selectedPcnId,
+  selectedPracticeId,
   summary,
   byCategory,
   byPractice,
@@ -152,6 +246,15 @@ export function ReportingDashboardClient({
   recentLogs,
   dataCompleteness,
 }: Props) {
+  const reportQueryString = useMemo(() => {
+    const p = new URLSearchParams()
+    p.set('start', startDate)
+    p.set('end', endDate)
+    if (selectedPcnId) p.set('pcn', selectedPcnId)
+    if (selectedPracticeId) p.set('practice', selectedPracticeId)
+    return p.toString()
+  }, [startDate, endDate, selectedPcnId, selectedPracticeId])
+
   const { overallCompletenessPct, overallTone } = useMemo(() => {
     const totalExpected = dataCompleteness.reduce((s, r) => s + r.expected_days, 0)
     const totalLogged = dataCompleteness.reduce((s, r) => s + r.logged_days, 0)
@@ -182,11 +285,18 @@ export function ReportingDashboardClient({
 
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1">
-          <DateFilter startDate={startDate} endDate={endDate} />
+          <ReportingFilters
+            startDate={startDate}
+            endDate={endDate}
+            pcns={pcns}
+            practices={practices}
+            selectedPcnId={selectedPcnId}
+            selectedPracticeId={selectedPracticeId}
+          />
         </div>
         <div className="flex w-full shrink-0 flex-col gap-2 md:w-auto md:max-w-md md:self-center">
           <a
-            href={`/reporting/report-preview?start=${encodeURIComponent(startDate)}&end=${encodeURIComponent(endDate)}`}
+            href={`/reporting/report-preview?${reportQueryString}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-teal-700 bg-white px-4 py-2 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-50 md:w-auto"
@@ -197,7 +307,7 @@ export function ReportingDashboardClient({
             Generate PDF Report
           </a>
           <a
-            href={`/api/export?start=${encodeURIComponent(startDate)}&end=${encodeURIComponent(endDate)}`}
+            href={`/api/export?${reportQueryString}`}
             download
             className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700 md:w-auto"
           >
@@ -410,7 +520,6 @@ export function ReportingDashboardClient({
                 <YAxis />
                 <Tooltip formatter={appointmentsTooltipFormatter} />
                 <Area type="monotone" dataKey="total_appointments" stroke="#0D9488" fill="url(#tealFill)" />
-                <Line type="monotone" dataKey="total_appointments" stroke="#0D9488" dot />
               </AreaChart>
             </ResponsiveContainer>
           </div>

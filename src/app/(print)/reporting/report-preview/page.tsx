@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function ReportPreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ start?: string; end?: string }>;
+  searchParams: Promise<{ start?: string; end?: string; pcn?: string; practice?: string }>;
 }) {
   const sp = await searchParams;
   const props = await loadMonthlyReportViewProps(sp);

@@ -1,6 +1,77 @@
 import { getProfile } from '@/lib/supabase/auth'
 import { createClient } from '@/lib/supabase/server'
 
+/** null = no practice filter; [] = impossible scope (no matching practices). */
+export type ReportingPracticeScope = string[] | null
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+export type ReportingPcnOption = { id: string; name: string }
+export type ReportingPracticeOption = {
+  id: string
+  name: string
+  pcn_id: string | null
+}
+
+export async function listReportingPcns(
+  organisationId: string,
+): Promise<ReportingPcnOption[]> {
+  await getProfile()
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('pcns')
+    .select('id, name')
+    .eq('organisation_id', organisationId)
+    .order('name', { ascending: true })
+  if (error) {
+    console.error('[listReportingPcns]', error.message)
+    return []
+  }
+  return (data ?? []) as ReportingPcnOption[]
+}
+
+export async function listReportingPractices(
+  organisationId: string,
+): Promise<ReportingPracticeOption[]> {
+  await getProfile()
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('practices')
+    .select('id, name, pcn_id')
+    .eq('organisation_id', organisationId)
+    .order('name', { ascending: true })
+  if (error) {
+    console.error('[listReportingPractices]', error.message)
+    return []
+  }
+  return (data ?? []) as ReportingPracticeOption[]
+}
+
+/**
+ * Resolve URL filter params to a list of practice IDs for activity_report queries.
+ * - Single practice: [id]
+ * - PCN: all practice IDs in that PCN (may be [])
+ * - Neither / invalid: null (no filter)
+ */
+export function resolveReportingPracticeScope(
+  practices: ReportingPracticeOption[],
+  pcnId: string | null | undefined,
+  practiceId: string | null | undefined,
+): ReportingPracticeScope {
+  const pParam = practiceId?.trim() ?? ''
+  if (pParam && UUID_RE.test(pParam)) {
+    const exists = practices.some((p) => p.id === pParam)
+    return exists ? [pParam] : null
+  }
+  const cParam = pcnId?.trim() ?? ''
+  if (cParam && UUID_RE.test(cParam)) {
+    const inPcn = practices.filter((p) => p.pcn_id === cParam).map((p) => p.id)
+    return inPcn
+  }
+  return null
+}
+
 type ActivityReportRow = {
   log_id: string | null
   log_date: string | null
@@ -11,6 +82,7 @@ type ActivityReportRow = {
   category_name: string | null
   appointment_count: number | null
   submitted_at: string | null
+  practice_id?: string | null
 }
 
 type RecentLogCategory = { name: string; count: number }
@@ -94,10 +166,11 @@ function isUtcWeekdayIso(isoYmd: string): boolean {
 export async function getDataCompleteness(
   startDate: string,
   endDate: string,
+  practiceScope?: ReportingPracticeScope,
 ): Promise<DataCompletenessRow[]> {
   await getProfile()
   const expected = countWeekdaysInclusive(startDate, endDate)
-  const rows = await fetchRowsForRange(startDate, endDate)
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
 
   const loggedDatesByClinician = new Map<string, Set<string>>()
   const nameByClinician = new Map<string, string>()
@@ -269,9 +342,9 @@ export async function getMyRecentLogs(
   const { data, error } = await supabase
     .from('activity_report')
     .select(
-      'log_id, log_date, hours_worked, clinician_id, clinician_name, practice_name, category_name, appointment_count, submitted_at',
+      'log_id, log_date, hours_worked, clinician_id, clinician_name, practice_name, category_name, appointment_count, practice_id',
     )
-    .order('submitted_at', { ascending: false })
+    .order('log_date', { ascending: false })
     .limit(300)
 
   if (error) {
@@ -313,18 +386,29 @@ export async function getMyRecentLogs(
   return Array.from(grouped.values()).slice(0, limit)
 }
 
+const REPORT_SELECT =
+  'log_id, log_date, hours_worked, clinician_id, clinician_name, practice_name, category_name, appointment_count, practice_id'
+
 async function fetchRowsForRange(
   startDate: string,
   endDate: string,
+  practiceScope?: ReportingPracticeScope,
 ): Promise<ActivityReportRow[]> {
+  if (practiceScope !== null && practiceScope !== undefined && practiceScope.length === 0) {
+    return []
+  }
   const supabase = await createClient()
-  const { data, error } = await supabase
+  let q = supabase
     .from('activity_report')
-    .select(
-      'log_id, log_date, hours_worked, clinician_id, clinician_name, practice_name, category_name, appointment_count, submitted_at',
-    )
+    .select(REPORT_SELECT)
     .gte('log_date', startDate)
     .lte('log_date', endDate)
+
+  if (practiceScope != null && practiceScope.length > 0) {
+    q = q.in('practice_id', practiceScope)
+  }
+
+  const { data, error } = await q
 
   if (error) {
     console.error('[reporting.fetchRowsForRange]', error.message)
@@ -345,8 +429,12 @@ function hoursByUniqueLog(rows: ActivityReportRow[]): Map<string, number> {
   return byLog
 }
 
-export async function getReportingSummary(startDate: string, endDate: string): Promise<ReportingSummary> {
-  const rows = await fetchRowsForRange(startDate, endDate)
+export async function getReportingSummary(
+  startDate: string,
+  endDate: string,
+  practiceScope?: ReportingPracticeScope,
+): Promise<ReportingSummary> {
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
   const totalAppointments = rows.reduce((sum, row) => sum + Number(row.appointment_count ?? 0), 0)
   const uniqueClinicians = new Set(rows.map((r) => r.clinician_id).filter(Boolean))
   const uniqueLogs = new Set(rows.map((r) => r.log_id).filter(Boolean))
@@ -367,8 +455,9 @@ export async function getReportingSummary(startDate: string, endDate: string): P
 export async function getAppointmentsByCategory(
   startDate: string,
   endDate: string,
+  practiceScope?: ReportingPracticeScope,
 ): Promise<CategoryBreakdownItem[]> {
-  const rows = await fetchRowsForRange(startDate, endDate)
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
   const totals = new Map<string, number>()
   let grandTotal = 0
 
@@ -391,8 +480,9 @@ export async function getAppointmentsByCategory(
 export async function getAppointmentsByPractice(
   startDate: string,
   endDate: string,
+  practiceScope?: ReportingPracticeScope,
 ): Promise<PracticeBreakdownItem[]> {
-  const rows = await fetchRowsForRange(startDate, endDate)
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
   const map = new Map<string, { total_count: number; logIds: Set<string>; hoursByLog: Map<string, number> }>()
 
   for (const row of rows) {
@@ -422,8 +512,12 @@ export async function getAppointmentsByPractice(
     .sort((a, b) => b.total_count - a.total_count)
 }
 
-export async function getDailyTrend(startDate: string, endDate: string): Promise<DailyTrendItem[]> {
-  const rows = await fetchRowsForRange(startDate, endDate)
+export async function getDailyTrend(
+  startDate: string,
+  endDate: string,
+  practiceScope?: ReportingPracticeScope,
+): Promise<DailyTrendItem[]> {
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
   const map = new Map<string, { total_appointments: number; hoursByLog: Map<string, number> }>()
 
   for (const row of rows) {
@@ -452,8 +546,9 @@ export async function getDailyTrend(startDate: string, endDate: string): Promise
 export async function getClinicianBreakdown(
   startDate: string,
   endDate: string,
+  practiceScope?: ReportingPracticeScope,
 ): Promise<ClinicianBreakdownItem[]> {
-  const rows = await fetchRowsForRange(startDate, endDate)
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
   const map = new Map<
     string,
     { total_appointments: number; practices: Set<string>; logs: Set<string>; hoursByLog: Map<string, number> }
@@ -490,15 +585,34 @@ export async function getClinicianBreakdown(
     .sort((a, b) => b.total_appointments - a.total_appointments)
 }
 
-export async function getRecentLogs(limit: number): Promise<RecentLogItem[]> {
+export async function getRecentLogs(
+  limit: number,
+  options?: {
+    practiceScope?: ReportingPracticeScope
+    startDate?: string
+    endDate?: string
+  },
+): Promise<RecentLogItem[]> {
+  const scope = options?.practiceScope
+  if (scope !== null && scope !== undefined && scope.length === 0) {
+    return []
+  }
+
   const supabase = await createClient()
-  const { data, error } = await supabase
+  let q = supabase
     .from('activity_report')
-    .select(
-      'log_id, log_date, hours_worked, clinician_name, practice_name, category_name, appointment_count, submitted_at',
-    )
-    .order('submitted_at', { ascending: false })
-    .limit(Math.max(limit * 8, 30))
+    .select(REPORT_SELECT)
+    .order('log_date', { ascending: false })
+    .limit(Math.max(limit * 8, 80))
+
+  if (options?.startDate && options?.endDate) {
+    q = q.gte('log_date', options.startDate).lte('log_date', options.endDate)
+  }
+  if (scope != null && scope.length > 0) {
+    q = q.in('practice_id', scope)
+  }
+
+  const { data, error } = await q
 
   if (error) {
     console.error('[reporting.getRecentLogs]', error.message)

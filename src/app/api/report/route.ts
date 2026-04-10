@@ -14,8 +14,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const start = searchParams.get("start") ?? undefined;
   const end = searchParams.get("end") ?? undefined;
+  const pcn = searchParams.get("pcn") ?? undefined;
+  const practice = searchParams.get("practice") ?? undefined;
 
-  const props = await loadMonthlyReportViewProps({ start, end });
+  const props = await loadMonthlyReportViewProps({ start, end, pcn, practice });
   const html = buildMonthlyReportApiDocumentHtml(props);
 
   return new Response(html, {

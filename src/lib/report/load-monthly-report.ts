@@ -4,6 +4,8 @@ import {
   getAppointmentsByPractice,
   getClinicianBreakdown,
   getReportingSummary,
+  listReportingPractices,
+  resolveReportingPracticeScope,
 } from "@/lib/supabase/reporting";
 
 import { getOrganisationName } from "./org";
@@ -30,9 +32,18 @@ export function resolveReportDateRange(sp: {
 export async function loadMonthlyReportViewProps(sp: {
   start?: string;
   end?: string;
+  pcn?: string;
+  practice?: string;
 }): Promise<MonthlyReportViewProps> {
   const profile = await getProfile();
   const { safeStart, safeEnd } = resolveReportDateRange(sp);
+
+  const practices = await listReportingPractices(profile.organisation_id);
+  const practiceScope = resolveReportingPracticeScope(
+    practices,
+    sp.pcn?.trim(),
+    sp.practice?.trim(),
+  );
 
   const generatedAt = new Date();
   const generatedAtLabel = generatedAt.toLocaleString("en-GB", {
@@ -45,10 +56,10 @@ export async function loadMonthlyReportViewProps(sp: {
   const [orgName, summary, byCategory, byPractice, clinicianBreakdown] =
     await Promise.all([
       getOrganisationName(profile.organisation_id),
-      getReportingSummary(safeStart, safeEnd),
-      getAppointmentsByCategory(safeStart, safeEnd),
-      getAppointmentsByPractice(safeStart, safeEnd),
-      getClinicianBreakdown(safeStart, safeEnd),
+      getReportingSummary(safeStart, safeEnd, practiceScope),
+      getAppointmentsByCategory(safeStart, safeEnd, practiceScope),
+      getAppointmentsByPractice(safeStart, safeEnd, practiceScope),
+      getClinicianBreakdown(safeStart, safeEnd, practiceScope),
     ]);
 
   const organisationName = orgName ?? "Organisation";

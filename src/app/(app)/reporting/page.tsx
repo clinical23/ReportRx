@@ -7,6 +7,9 @@ import {
   getDataCompleteness,
   getRecentLogs,
   getReportingSummary,
+  listReportingPcns,
+  listReportingPractices,
+  resolveReportingPracticeScope,
 } from '@/lib/supabase/reporting'
 import { ReportingDashboardClient } from './reporting-dashboard-client'
 import type { Metadata } from "next";
@@ -17,9 +20,9 @@ export const metadata: Metadata = { title: "Reporting" };
 export default async function ReportingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ start?: string; end?: string }>;
+  searchParams: Promise<{ start?: string; end?: string; pcn?: string; practice?: string }>;
 }) {
-  await getProfile()
+  const profile = await getProfile()
   const sp = await searchParams
 
   const today = new Date()
@@ -34,6 +37,20 @@ export default async function ReportingPage({
   const safeStart = start <= end ? start : end
   const safeEnd = start <= end ? end : start
 
+  const pcnParam = sp.pcn?.trim() || undefined
+  const practiceParam = sp.practice?.trim() || undefined
+
+  const [pcns, practices] = await Promise.all([
+    listReportingPcns(profile.organisation_id),
+    listReportingPractices(profile.organisation_id),
+  ])
+
+  const practiceScope = resolveReportingPracticeScope(
+    practices,
+    pcnParam,
+    practiceParam,
+  )
+
   const [
     summary,
     byCategory,
@@ -43,19 +60,27 @@ export default async function ReportingPage({
     recentLogs,
     dataCompleteness,
   ] = await Promise.all([
-    getReportingSummary(safeStart, safeEnd),
-    getAppointmentsByCategory(safeStart, safeEnd),
-    getAppointmentsByPractice(safeStart, safeEnd),
-    getDailyTrend(safeStart, safeEnd),
-    getClinicianBreakdown(safeStart, safeEnd),
-    getRecentLogs(10),
-    getDataCompleteness(safeStart, safeEnd),
+    getReportingSummary(safeStart, safeEnd, practiceScope),
+    getAppointmentsByCategory(safeStart, safeEnd, practiceScope),
+    getAppointmentsByPractice(safeStart, safeEnd, practiceScope),
+    getDailyTrend(safeStart, safeEnd, practiceScope),
+    getClinicianBreakdown(safeStart, safeEnd, practiceScope),
+    getRecentLogs(10, {
+      practiceScope,
+      startDate: safeStart,
+      endDate: safeEnd,
+    }),
+    getDataCompleteness(safeStart, safeEnd, practiceScope),
   ])
 
   return (
     <ReportingDashboardClient
       startDate={safeStart}
       endDate={safeEnd}
+      pcns={pcns}
+      practices={practices}
+      selectedPcnId={pcnParam ?? null}
+      selectedPracticeId={practiceParam ?? null}
       summary={summary}
       byCategory={byCategory}
       byPractice={byPractice}
