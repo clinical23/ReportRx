@@ -7,6 +7,7 @@ import { ClipboardList } from "lucide-react";
 import { useToast } from "@/components/ui/toast-provider";
 
 import { editActivityLog } from '@/app/actions/activity'
+import { logAudit } from '@/lib/audit'
 import {
   Card,
   CardContent,
@@ -31,6 +32,7 @@ type LogEditRow = {
 export type GroupedRecentLog = {
   log_id: string
   log_date: string
+  practice_id: string
   hours_worked: number | null
   clinician_name: string
   practice_name: string
@@ -141,6 +143,10 @@ export default function RecentLogs({
         toast.error(result.error)
         return
       }
+      void logAudit('edit', 'activity_log', activeEditLog.log_id, {
+        date: activeEditLog.log_date.slice(0, 10),
+        practice_id: activeEditLog.practice_id,
+      })
       setMessage({ type: 'success', text: 'Log updated successfully' })
       toast.success('Log updated successfully')
       setEditingLogId(null)

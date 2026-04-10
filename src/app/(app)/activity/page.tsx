@@ -17,6 +17,7 @@ import {
 } from "@/lib/report/org";
 import { getPracticeScopeIdsForSession } from '@/lib/supabase/practice-scope'
 import { listClinicians } from '@/lib/supabase/data'
+import { RegisterPageView } from '@/components/audit/register-page-view'
 import ActivityLogForm from './ActivityLogForm'
 import MyWeekStrip from '@/components/my-week-strip'
 import RecentLogs from './RecentLogs'
@@ -91,6 +92,7 @@ export default async function ActivityPage() {
 
     return (
       <div className="mx-auto min-w-0 max-w-4xl space-y-8 overflow-x-hidden pb-24 md:pb-0">
+        <RegisterPageView resource="activity_log" />
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
             Activity

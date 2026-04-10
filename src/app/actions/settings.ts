@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { logAudit } from "@/lib/audit";
 import { getProfile, type Profile } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -38,13 +37,6 @@ export async function updateProfile(
     console.error("[updateProfile]", error.message);
     return { success: false, error: "Could not update profile." };
   }
-
-  logAudit({
-    supabase,
-    action: "edit",
-    resourceType: "settings",
-    metadata: { fieldsChanged: ["full_name"] },
-  });
 
   revalidatePath("/settings");
   revalidatePath("/");
@@ -133,15 +125,6 @@ export async function updateOrganisation(
     return { success: false, error: "Could not update organisation." };
   }
 
-  if (fieldsChanged.length > 0) {
-    logAudit({
-      supabase,
-      action: "edit",
-      resourceType: "settings",
-      metadata: { fieldsChanged },
-    });
-  }
-
   revalidatePath("/settings");
   revalidatePath("/activity");
   return { success: true };
@@ -185,13 +168,6 @@ export async function createCategory(
     return { success: false, error: "Could not create category." };
   }
 
-  logAudit({
-    supabase,
-    action: "edit",
-    resourceType: "settings",
-    metadata: { fieldsChanged: ["category_create"] },
-  });
-
   revalidatePath("/settings");
   revalidatePath("/activity");
   revalidatePath("/reporting");
@@ -223,13 +199,6 @@ export async function updateCategory(
     return { success: false, error: "Could not update category." };
   }
 
-  logAudit({
-    supabase,
-    action: "edit",
-    resourceType: "settings",
-    metadata: { fieldsChanged: ["category_update"] },
-  });
-
   revalidatePath("/settings");
   revalidatePath("/activity");
   revalidatePath("/reporting");
@@ -257,13 +226,6 @@ export async function archiveCategory(
     return { success: false, error: "Could not archive category." };
   }
 
-  logAudit({
-    supabase,
-    action: "edit",
-    resourceType: "settings",
-    metadata: { fieldsChanged: ["category_archive"] },
-  });
-
   revalidatePath("/settings");
   revalidatePath("/activity");
   revalidatePath("/reporting");
@@ -290,13 +252,6 @@ export async function unarchiveCategory(
     console.error("[unarchiveCategory]", error.message);
     return { success: false, error: "Could not restore category." };
   }
-
-  logAudit({
-    supabase,
-    action: "edit",
-    resourceType: "settings",
-    metadata: { fieldsChanged: ["category_unarchive"] },
-  });
 
   revalidatePath("/settings");
   revalidatePath("/activity");
@@ -363,13 +318,6 @@ export async function reorderCategory(
     console.error("[reorderCategory] b", e2.message);
     return { success: false, error: "Could not reorder." };
   }
-
-  logAudit({
-    supabase,
-    action: "edit",
-    resourceType: "settings",
-    metadata: { fieldsChanged: ["category_reorder"] },
-  });
 
   revalidatePath("/settings");
   revalidatePath("/activity");

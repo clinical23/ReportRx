@@ -14,7 +14,8 @@ import {
   Area,
   AreaChart,
 } from 'recharts'
-import { AuditPageView } from '@/components/audit/AuditPageView'
+import { RegisterPageView } from '@/components/audit/register-page-view'
+import { logAudit } from '@/lib/audit'
 import type {
   CategoryBreakdownItem,
   ClinicianBreakdownItem,
@@ -283,15 +284,7 @@ export function ReportingDashboardClient({
 
   return (
     <div className="space-y-6">
-      <AuditPageView
-        resourceType="reporting"
-        viewKey={reportQueryString}
-        metadata={{
-          dateRange: { from: startDate, to: endDate },
-          pcnId: selectedPcnId,
-          practiceId: selectedPracticeId,
-        }}
-      />
+      <RegisterPageView resource="reporting" />
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">Reporting</h1>
         <p className="text-sm text-gray-500">
@@ -315,6 +308,13 @@ export function ReportingDashboardClient({
             href={`/reporting/report-preview?${reportQueryString}`}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => {
+              void logAudit('export', 'reporting', undefined, {
+                format: 'pdf',
+                date_from: startDate,
+                date_to: endDate,
+              })
+            }}
             className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-teal-700 bg-white px-4 py-2 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-50 md:w-auto"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -325,6 +325,13 @@ export function ReportingDashboardClient({
           <a
             href={`/api/export?${reportQueryString}`}
             download
+            onClick={() => {
+              void logAudit('export', 'reporting', undefined, {
+                format: 'csv',
+                date_from: startDate,
+                date_to: endDate,
+              })
+            }}
             className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700 md:w-auto"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>

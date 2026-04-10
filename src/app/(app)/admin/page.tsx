@@ -6,7 +6,7 @@ import {
   setProfileActive,
 } from '@/app/actions/admin'
 import { AuditLogViewer } from '@/components/audit/AuditLogViewer'
-import { AuditPageView } from '@/components/audit/AuditPageView'
+import { RegisterPageView } from '@/components/audit/register-page-view'
 import { AdminExportUserData } from '@/components/admin/admin-export-user-data'
 import { AdminBulkInviteForm } from '@/components/admin/admin-bulk-invite-form'
 import { AdminInviteForm } from '@/components/admin/admin-invite-form'
@@ -66,7 +66,7 @@ export default async function AdminPage({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      <AuditPageView resourceType="admin" />
+      <RegisterPageView resource="admin" />
       {actionError ? (
         <div
           className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"

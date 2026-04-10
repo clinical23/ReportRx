@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useToast } from "@/components/ui/toast-provider";
 
 import { logAudit } from "@/lib/audit";
-import { createClient } from "@/lib/supabase/client";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -123,12 +122,9 @@ export function AdminBulkInviteForm({
         toast.success(summary);
       }
       if (success > 0) {
-        const supabase = createClient();
-        logAudit({
-          supabase,
-          action: "invite",
-          resourceType: "bulk_invite",
-          metadata: { count: success, role: role.trim() },
+        void logAudit("invite", "bulk_invite", undefined, {
+          count: success,
+          role: role.trim(),
         });
         setRaw("");
       }

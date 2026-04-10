@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useToast } from "@/components/ui/toast-provider";
 
+import { logAudit } from "@/lib/audit";
+
 type Props = {
   organisationId: string;
   /** Superadmins may invite users with the org admin role. */
@@ -25,14 +27,17 @@ export function AdminInviteForm({ organisationId, allowAdminRole }: Props) {
     setWarning(null);
     setError(null);
 
+    const invitedEmail = email.trim().toLowerCase();
+    const invitedRole = role.trim();
+
     try {
       const res = await fetch("/api/invite", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          role: role.trim(),
+          email: invitedEmail,
+          role: invitedRole,
           organisation_id: organisationId,
         }),
       });
@@ -59,6 +64,10 @@ export function AdminInviteForm({ organisationId, allowAdminRole }: Props) {
       const okMessage = data.message ?? "Invitation email sent.";
       setMessage(okMessage);
       toast.success(okMessage);
+      void logAudit("invite", "admin", undefined, {
+        email: invitedEmail,
+        role: invitedRole,
+      });
       setEmail("");
       setRole("");
     } catch {

@@ -13,7 +13,7 @@ export type AuditAction =
   | "invite"
   | "deactivate";
 
-export type AuditResource =
+export type AuditResourceType =
   | "dashboard"
   | "reporting"
   | "activity_log"
@@ -25,62 +25,124 @@ export type AuditResource =
   | "bulk_invite"
   | "dsar";
 
-export type AuditSupabaseClient = SupabaseClient<Database>;
+/**
+ * Browser-only audit insert (uses anon client + session). Fire-and-forget from UI: `void logAudit(...)`.
+ * Logout flows may `await logAudit(...)` so the row is written before the session ends.
+ */
+export async function logAudit(
+  action: AuditAction,
+  resourceType: AuditResourceType,
+  resourceId?: string,
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
 
-export interface AuditLogParams {
-  supabase: AuditSupabaseClient;
-  action: AuditAction;
-  resourceType: AuditResource;
-  resourceId?: string;
-  metadata?: Record<string, unknown>;
-  ipAddress?: string | null;
-  userAgent?: string | null;
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("organisation_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError || !profile?.organisation_id) return;
+
+    const { error } = await supabase.from("audit_logs").insert({
+      user_id: user.id,
+      organisation_id: profile.organisation_id,
+      action,
+      resource_type: resourceType,
+      resource_id: resourceId ?? null,
+      metadata: (metadata === undefined ? null : metadata) as Json | null,
+      user_agent:
+        typeof navigator !== "undefined" ? navigator.userAgent : null,
+    });
+
+    if (error) console.error("[audit]", error);
+  } catch (err) {
+    console.error("[audit]", err);
+  }
+}
+
+async function insertAuditWithServerClient(
+  supabase: SupabaseClient<Database>,
+  action: AuditAction,
+  resourceType: AuditResourceType,
+  resourceId?: string,
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("organisation_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError || !profile?.organisation_id) return;
+
+  const { error } = await supabase.from("audit_logs").insert({
+    user_id: user.id,
+    organisation_id: profile.organisation_id,
+    action,
+    resource_type: resourceType,
+    resource_id: resourceId ?? null,
+    metadata: (metadata === undefined ? null : metadata) as Json | null,
+    user_agent: null,
+  });
+
+  if (error) console.error("[audit]", error);
 }
 
 /**
- * Writes an audit row without blocking the caller (insert is not awaited).
- * Never throws to the caller.
+ * Server Actions and Route Handlers: session must be the acting user. Non-blocking.
  */
-export function logAudit({
-  supabase,
-  action,
-  resourceType,
-  resourceId,
-  metadata,
-  ipAddress,
-  userAgent,
-}: AuditLogParams): void {
+export function logAuditWithServerSupabase(
+  supabase: SupabaseClient<Database>,
+  action: AuditAction,
+  resourceType: AuditResourceType,
+  resourceId?: string,
+  metadata?: Record<string, unknown>,
+): void {
   void (async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organisation_id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!profile?.organisation_id) return;
-
-      const row: Database["public"]["Tables"]["audit_logs"]["Insert"] = {
-        user_id: user.id,
-        organisation_id: profile.organisation_id,
+      await insertAuditWithServerClient(
+        supabase,
         action,
-        resource_type: resourceType,
-        resource_id: resourceId ?? null,
-        metadata: (metadata != null ? (metadata as Json) : null),
-        ip_address: ipAddress ?? null,
-        user_agent: userAgent ?? null,
-      };
-
-      void supabase.from("audit_logs").insert(row).then(({ error }) => {
-        if (error) console.warn("[audit]", error.message);
-      });
-    } catch {
-      /* ignore */
+        resourceType,
+        resourceId,
+        metadata,
+      );
+    } catch (err) {
+      console.error("[audit]", err);
     }
   })();
+}
+
+/** Await before ending the session (e.g. sign-out). */
+export async function awaitLogAuditWithServerSupabase(
+  supabase: SupabaseClient<Database>,
+  action: AuditAction,
+  resourceType: AuditResourceType,
+  resourceId?: string,
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await insertAuditWithServerClient(
+      supabase,
+      action,
+      resourceType,
+      resourceId,
+      metadata,
+    );
+  } catch (err) {
+    console.error("[audit]", err);
+  }
 }

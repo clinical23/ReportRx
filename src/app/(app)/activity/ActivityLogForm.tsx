@@ -8,6 +8,7 @@ import {
   getPreviousDayLog,
   saveActivityLog,
 } from "@/app/actions/activity";
+import { logAudit } from "@/lib/audit";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-provider";
 import type { ActivityCategory } from "@/lib/supabase/activity";
@@ -222,6 +223,10 @@ export default function ActivityLogForm({
           text: `Activity saved for ${logDate} at ${practiceName}`,
         });
         toast.success(`Activity saved for ${logDate} at ${practiceName}`);
+        void logAudit("create", "activity_log", result.log_id, {
+          date: logDate,
+          practice_id: practiceId,
+        });
         setCounts({});
       } else {
         setMessage({ type: "error", text: result.error });
@@ -247,6 +252,11 @@ export default function ActivityLogForm({
           text,
         });
         toast.success(text);
+        void logAudit("create", "activity_log", undefined, {
+          date: bulkDate,
+          practice_id: bulkPracticeId,
+          count: result.count,
+        });
         setBulkCounts({});
         setBulkClinicianIds([]);
       } else {

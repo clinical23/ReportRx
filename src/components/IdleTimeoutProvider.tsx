@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { logAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/client";
 
 const IDLE_MS = 15 * 60 * 1000;
@@ -46,6 +47,7 @@ export function IdleTimeoutProvider({ children }: { children: React.ReactNode })
 
   const signOutAndRedirect = useCallback(async () => {
     try {
+      await logAudit("logout", "auth");
       const supabase = createClient();
       await supabase.auth.signOut();
     } catch {

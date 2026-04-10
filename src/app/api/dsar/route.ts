@@ -1,23 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { logAudit } from "@/lib/audit";
+import { logAuditWithServerSupabase } from "@/lib/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const HOURS_24_MS = 24 * 60 * 60 * 1000;
-
-function requestClientMeta(request: Request): {
-  ipAddress: string | null;
-  userAgent: string | null;
-} {
-  const xf = request.headers.get("x-forwarded-for");
-  const ip =
-    xf?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || null;
-  return {
-    ipAddress: ip,
-    userAgent: request.headers.get("user-agent"),
-  };
-}
 
 function filenameSafeName(name: string): string {
   const s = name.trim().replace(/\s+/g, "-").toLowerCase();
@@ -384,16 +371,9 @@ export async function GET(request: Request) {
     audit_trail,
   };
 
-  const meta = requestClientMeta(request);
-  logAudit({
-    supabase,
-    action: "export",
-    resourceType: "dsar",
-    resourceId: subjectId !== user.id ? subjectId : undefined,
-    metadata:
-      subjectId !== user.id ? { subjectUserId: subjectId } : undefined,
-    ipAddress: meta.ipAddress,
-    userAgent: meta.userAgent,
+  logAuditWithServerSupabase(supabase, "export", "dsar", undefined, {
+    requested_by: user.id,
+    ...(subjectId !== user.id ? { subject_user_id: subjectId } : {}),
   });
 
   const fname = `reportrx-data-export-${filenameSafeName(profile.full_name)}-${new Date().toISOString().split("T")[0]}.json`;

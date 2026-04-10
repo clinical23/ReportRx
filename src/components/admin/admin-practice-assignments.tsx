@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { Building2, Users } from "lucide-react";
 
 import { syncClinicianPracticeAssignments } from "@/app/actions/admin";
+import { logAudit } from "@/lib/audit";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -126,6 +127,9 @@ export function AdminPracticeAssignments({
         return;
       }
       toast.success("Practice assignments updated.");
+      void logAudit("edit", "practice_assignment", activeClinician.id, {
+        practice_ids: [...selected],
+      });
       setAssignments((prev) => {
         const rest = prev.filter((a) => a.clinician_id !== activeClinician.id);
         const added = [...selected].map((practice_id) => ({

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { logAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/client";
 
 export function MfaVerifyClient() {
@@ -104,6 +105,7 @@ export function MfaVerifyClient() {
   };
 
   const signOut = async () => {
+    await logAudit("logout", "auth");
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");

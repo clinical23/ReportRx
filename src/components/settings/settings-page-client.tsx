@@ -18,7 +18,8 @@ import {
   updateOrganisation,
   updateProfile,
 } from "@/app/actions/settings";
-import { AuditPageView } from "@/components/audit/AuditPageView";
+import { logAudit } from "@/lib/audit";
+import { RegisterPageView } from "@/components/audit/register-page-view";
 import { DsarExportCard } from "@/components/settings/dsar-export-card";
 import { MfaSettingsSection } from "@/components/settings/mfa-settings-section";
 import { Button } from "@/components/ui/button";
@@ -120,8 +121,10 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await updateProfile(fd);
       setProfileFlash(r.success ? { message: "Profile saved.", ok: true } : { message: r.error, ok: false });
-      if (r.success) toast.success("Profile saved.");
-      else toast.error(r.error);
+      if (r.success) {
+        toast.success("Profile saved.");
+        void logAudit("edit", "settings", undefined, { field: "profile" });
+      } else toast.error(r.error);
       if (r.success) router.refresh();
     });
   };
@@ -142,8 +145,10 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await updateOrganisation(fd);
       setOrgFlash(r.success ? { message: "Settings saved", ok: true } : { message: r.error, ok: false });
-      if (r.success) toast.success("Settings saved");
-      else toast.error(r.error);
+      if (r.success) {
+        toast.success("Settings saved");
+        void logAudit("edit", "settings", undefined, { field: "organisation" });
+      } else toast.error(r.error);
       if (r.success) router.refresh();
     });
   };
@@ -159,6 +164,7 @@ export function SettingsPageClient({
         setNewCatName("");
         setCatFlash({ message: "Categories updated", ok: true });
         toast.success("Categories updated");
+        void logAudit("edit", "settings", undefined, { action: "add" });
         router.refresh();
       } else {
         setCatFlash({ message: r.error, ok: false });
@@ -175,8 +181,10 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await updateCategory(fd);
       setCatFlash(r.success ? { message: "Categories updated", ok: true } : { message: r.error, ok: false });
-      if (r.success) toast.success("Categories updated");
-      else toast.error(r.error);
+      if (r.success) {
+        toast.success("Categories updated");
+        void logAudit("edit", "settings", categoryId, { action: "rename" });
+      } else toast.error(r.error);
       if (r.success) router.refresh();
     });
   };
@@ -188,8 +196,10 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await archiveCategory(fd);
       setCatFlash(r.success ? { message: "Categories updated", ok: true } : { message: r.error, ok: false });
-      if (r.success) toast.success("Categories updated");
-      else toast.error(r.error);
+      if (r.success) {
+        toast.success("Categories updated");
+        void logAudit("edit", "settings", categoryId, { action: "archive" });
+      } else toast.error(r.error);
       if (r.success) router.refresh();
     });
   };
@@ -201,8 +211,10 @@ export function SettingsPageClient({
     startTransition(async () => {
       const r = await unarchiveCategory(fd);
       setCatFlash(r.success ? { message: "Categories updated", ok: true } : { message: r.error, ok: false });
-      if (r.success) toast.success("Categories updated");
-      else toast.error(r.error);
+      if (r.success) {
+        toast.success("Categories updated");
+        void logAudit("edit", "settings", categoryId, { action: "restore" });
+      } else toast.error(r.error);
       if (r.success) router.refresh();
     });
   };
@@ -220,6 +232,7 @@ export function SettingsPageClient({
       } else {
         setCatFlash({ message: "Categories updated", ok: true });
         toast.success("Categories updated");
+        void logAudit("edit", "settings", categoryId, { action: "reorder" });
         router.refresh();
       }
     });
@@ -227,7 +240,7 @@ export function SettingsPageClient({
 
   return (
     <div className="mx-auto min-w-0 max-w-3xl space-y-8">
-      <AuditPageView resourceType="settings" />
+      <RegisterPageView resource="settings" />
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
         <p className="mt-1 text-sm text-gray-500">

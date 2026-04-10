@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { AuditPageView } from "@/components/audit/AuditPageView";
+import { RegisterPageView } from "@/components/audit/register-page-view";
 import { CliniciansView } from "@/components/clinicians/clinicians-view";
 import { getProfile, requireRole } from "@/lib/supabase/auth";
 import { listOrganisationTeamMembers } from "@/lib/supabase/data";
@@ -31,7 +31,7 @@ export default async function CliniciansPage() {
 
   return (
     <div className="min-w-0">
-      <AuditPageView resourceType="clinician" />
+      <RegisterPageView resource="clinician" />
       <CliniciansView members={members} />
     </div>
   );

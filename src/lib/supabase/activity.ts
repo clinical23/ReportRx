@@ -350,6 +350,7 @@ export async function listRecentLogsGrouped(
     return {
       log_id: id,
       log_date: String(log.log_date),
+      practice_id: String(log.practice_id),
       hours_worked: log.hours_worked == null ? null : Number(log.hours_worked),
       clinician_name: clinicianNameById.get(String(log.clinician_id)) ?? 'Unknown clinician',
       practice_name: practiceNameById.get(String(log.practice_id)) ?? 'Unknown practice',

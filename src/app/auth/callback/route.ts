@@ -45,5 +45,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=auth_failed`)
   }
 
+  // TODO: audit login (magic link / OAuth) — needs a Supabase insert after session is on the response
+
   return response
 }

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-import { logAudit } from '@/lib/audit'
+import { logAuditWithServerSupabase } from '@/lib/audit'
 import { requireRole } from '@/lib/supabase/auth'
 import { createClient } from '@/lib/supabase/server'
 
@@ -91,13 +91,15 @@ export async function changeUserRole(formData: FormData): Promise<void> {
   // Verify target user belongs to the same organisation
   const { data: targetUser } = await supabase
     .from('profiles')
-    .select('organisation_id')
+    .select('organisation_id, role')
     .eq('id', userId)
     .single()
 
   if (!targetUser || targetUser.organisation_id !== profile.organisation_id) {
     redirectAdminError('User not found in your organisation')
   }
+
+  const oldRole = String((targetUser as { role?: string }).role ?? '')
 
   const { error } = await supabase
     .from('profiles')
@@ -106,6 +108,11 @@ export async function changeUserRole(formData: FormData): Promise<void> {
     .eq('organisation_id', profile.organisation_id)
 
   if (error) redirectAdminError(error.message)
+
+  logAuditWithServerSupabase(supabase, 'edit', 'clinician', userId, {
+    old_role: oldRole,
+    new_role: newRole,
+  })
 
   revalidatePath('/admin')
 }
@@ -146,14 +153,9 @@ export async function setProfileActive(formData: FormData): Promise<void> {
 
   if (error) redirectAdminError(error.message)
 
-  if (!makeActive) {
-    logAudit({
-      supabase,
-      action: 'deactivate',
-      resourceType: 'admin',
-      resourceId: userId,
-    })
-  }
+  logAuditWithServerSupabase(supabase, 'deactivate', 'clinician', userId, {
+    is_active: makeActive,
+  })
 
   revalidatePath('/admin')
   revalidatePath('/clinicians')
@@ -245,14 +247,6 @@ export async function syncClinicianPracticeAssignments(
       return { success: false, error: insErr.message }
     }
   }
-
-  logAudit({
-    supabase,
-    action: 'edit',
-    resourceType: 'practice_assignment',
-    resourceId: trimmedClinician,
-    metadata: { practiceIds: uniquePracticeIds },
-  })
 
   revalidatePath('/admin')
   revalidatePath('/activity')

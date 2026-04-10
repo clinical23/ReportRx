@@ -1,24 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { logAudit } from "@/lib/audit";
 import {
   resolveReportingPracticeScope,
   type ReportingPracticeOption,
 } from "@/lib/supabase/reporting";
 import { createClient } from "@/lib/supabase/server";
-
-function requestClientMeta(request: Request): {
-  ipAddress: string | null;
-  userAgent: string | null;
-} {
-  const xf = request.headers.get("x-forwarded-for");
-  const ip =
-    xf?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || null;
-  return {
-    ipAddress: ip,
-    userAgent: request.headers.get("user-agent"),
-  };
-}
 
 function csvCell(value: unknown): string {
   const s = value == null ? "" : String(value);
@@ -75,20 +61,6 @@ export async function GET(request: Request) {
       "Hours",
     ];
     const csv = [headers.map(csvCell).join(",")].join("\n");
-    const meta = requestClientMeta(request);
-    logAudit({
-      supabase,
-      action: "export",
-      resourceType: "reporting",
-      metadata: {
-        format: "csv",
-        dateRange: { from: startDate, to: endDate },
-        pcnId: pcnParam ?? undefined,
-        practiceId: practiceParam ?? undefined,
-      },
-      ipAddress: meta.ipAddress,
-      userAgent: meta.userAgent,
-    });
     return new NextResponse(csv, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
@@ -137,21 +109,6 @@ export async function GET(request: Request) {
     headers.map(csvCell).join(","),
     ...rows.map((row) => row.map(csvCell).join(",")),
   ].join("\n");
-
-  const meta = requestClientMeta(request);
-  logAudit({
-    supabase,
-    action: "export",
-    resourceType: "reporting",
-    metadata: {
-      format: "csv",
-      dateRange: { from: startDate, to: endDate },
-      pcnId: pcnParam ?? undefined,
-      practiceId: practiceParam ?? undefined,
-    },
-    ipAddress: meta.ipAddress,
-    userAgent: meta.userAgent,
-  });
 
   return new NextResponse(csv, {
     headers: {
