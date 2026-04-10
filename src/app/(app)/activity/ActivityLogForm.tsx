@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import {
   bulkSaveActivityLogs,
   addActivityCategory,
+  getPreviousDayLog,
   saveActivityLog,
 } from "@/app/actions/activity";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import type { ActivityCategory } from "@/lib/supabase/activity";
 import type { ClinicianListItem } from "@/lib/supabase/data";
 import { todayISOInLondon } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
+import { Copy } from "lucide-react";
 
 type Practice = { id: string; name: string };
 
@@ -237,6 +239,36 @@ export default function ActivityLogForm({
     });
   }
 
+  function handleCopyFromLastEntry() {
+    startTransition(async () => {
+      setMessage(null);
+      if (!practiceId) {
+        setMessage({ type: "error", text: "Please select a practice first." });
+        return;
+      }
+
+      const result = await getPreviousDayLog(practiceId);
+      if (!result.success) {
+        setMessage({ type: "error", text: result.error });
+        return;
+      }
+
+      const nextCounts: CountMap = {};
+      for (const c of categories) nextCounts[c.id] = 0;
+      for (const entry of result.entries) {
+        nextCounts[entry.category_id] = Math.max(0, entry.count);
+      }
+      setCounts(nextCounts);
+      setHours(
+        result.hours_worked == null ? "" : formatHoursInitial(result.hours_worked),
+      );
+      setMessage({
+        type: "success",
+        text: `Copied from ${result.log_date}.`,
+      });
+    });
+  }
+
   function handleAddCategory() {
     startTransition(async () => {
       const result = await addActivityCategory(newCatName);
@@ -362,6 +394,21 @@ export default function ActivityLogForm({
             <p className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-500">
               Appointment categories
             </p>
+            {practiceId ? (
+              <div className="mb-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-10 w-full justify-center gap-2 text-sm md:h-9 md:w-auto"
+                  onClick={handleCopyFromLastEntry}
+                  disabled={isPending}
+                >
+                  <Copy className="h-4 w-4" />
+                  {isPending ? "Copying..." : "Copy from last entry"}
+                </Button>
+              </div>
+            ) : null}
             <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
               {categories.map((cat) => (
                 <CategoryStepperRow

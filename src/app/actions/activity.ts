@@ -22,6 +22,15 @@ export type SaveActivityLogResult =
   | { success: true; log_id: string }
   | { success: false; error: string }
 
+export type PreviousDayLogResult =
+  | {
+      success: true
+      log_date: string
+      hours_worked: number | null
+      entries: { category_id: string; count: number }[]
+    }
+  | { success: false; error: string }
+
 const MANAGER_ROLES = new Set([
   'manager',
   'practice_manager',
@@ -105,6 +114,60 @@ export async function saveActivityLog(input: SaveActivityLogInput): Promise<Save
   revalidatePath('/')
   revalidatePath('/reporting')
   return { success: true, log_id }
+}
+
+export async function getPreviousDayLog(
+  practiceId: string,
+): Promise<PreviousDayLogResult> {
+  const profile = await getProfile()
+  const supabase = await createClient()
+  const practice = practiceId.trim()
+  if (!practice) {
+    return { success: false, error: 'Please select a practice first.' }
+  }
+
+  const today = new Date()
+  const yyyy = today.getFullYear()
+  const mm = String(today.getMonth() + 1).padStart(2, '0')
+  const dd = String(today.getDate()).padStart(2, '0')
+  const todayIso = `${yyyy}-${mm}-${dd}`
+
+  const { data: priorLog, error: logError } = await supabase
+    .from('activity_logs')
+    .select('id, log_date, hours_worked')
+    .eq('clinician_id', profile.id)
+    .eq('practice_id', practice)
+    .lt('log_date', todayIso)
+    .order('log_date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (logError) {
+    return { success: false, error: 'Could not load previous entry.' }
+  }
+  if (!priorLog) {
+    return { success: false, error: 'No previous entry found for this practice.' }
+  }
+
+  const { data: entries, error: entriesError } = await supabase
+    .from('activity_log_entries')
+    .select('category_id, count')
+    .eq('log_id', priorLog.id)
+
+  if (entriesError) {
+    return { success: false, error: 'Could not load previous entry categories.' }
+  }
+
+  return {
+    success: true,
+    log_date: String(priorLog.log_date).slice(0, 10),
+    hours_worked:
+      priorLog.hours_worked == null ? null : Number(priorLog.hours_worked),
+    entries: (entries ?? []).map((e) => ({
+      category_id: String(e.category_id),
+      count: Number(e.count ?? 0),
+    })),
+  }
 }
 
 export type EditActivityLogInput = {
