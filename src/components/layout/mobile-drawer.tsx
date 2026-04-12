@@ -5,7 +5,13 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
-import { appNavAdminItem, appNavItems, type AppNavItem } from "./app-nav-items";
+import {
+  appNavAdminItem,
+  appNavPrimaryItems,
+  appNavSettingsItem,
+  appNavSupportItem,
+  type AppNavItem,
+} from "./app-nav-items";
 
 type Props = {
   open: boolean;
@@ -21,29 +27,34 @@ type Props = {
   signOutAction: () => Promise<void>;
 };
 
-function navLinkClass(active: boolean) {
-  return `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-    active
-      ? "bg-teal-50 text-teal-700"
-      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-  }`;
+function navLinkClass(active: boolean, muted: boolean) {
+  if (active) {
+    return `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors bg-teal-50 text-teal-700`;
+  }
+  if (muted) {
+    return `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-gray-500 hover:bg-gray-50 hover:text-gray-800`;
+  }
+  return `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900`;
 }
 
 function DrawerNavLink({
   item,
   isActive,
   onNavigate,
+  mutedWhenInactive,
 }: {
   item: AppNavItem;
   isActive: boolean;
   onNavigate: () => void;
+  mutedWhenInactive: boolean;
 }) {
   const Icon = item.icon;
+  const muted = mutedWhenInactive && !isActive;
   return (
     <li>
       <Link
         href={item.href}
-        className={navLinkClass(isActive)}
+        className={navLinkClass(isActive, muted)}
         onClick={onNavigate}
       >
         <Icon
@@ -71,10 +82,9 @@ export function MobileDrawer({
     return pathname.startsWith(href);
   };
 
-  const navItems = canAccessCliniciansDirectory
-    ? appNavItems
-    : appNavItems.filter((item) => item.href !== "/clinicians");
-  const allItems = canAccessAdmin ? [...navItems, appNavAdminItem] : navItems;
+  const primaryItems = canAccessCliniciansDirectory
+    ? appNavPrimaryItems
+    : appNavPrimaryItems.filter((item) => item.href !== "/clinicians");
 
   const roleLabels: Record<string, string> = {
     clinician: "Clinician",
@@ -149,14 +159,41 @@ export function MobileDrawer({
 
         <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
           <ul className="list-none space-y-1">
-            {allItems.map((item) => (
+            {primaryItems.map((item) => (
               <DrawerNavLink
                 key={item.href}
                 item={item}
                 isActive={isActive(item.href)}
                 onNavigate={onClose}
+                mutedWhenInactive={false}
               />
             ))}
+          </ul>
+
+          <ul className="mt-3 list-none space-y-1 border-t border-gray-100 pt-3">
+            <DrawerNavLink
+              item={appNavSettingsItem}
+              isActive={isActive(appNavSettingsItem.href)}
+              onNavigate={onClose}
+              mutedWhenInactive={false}
+            />
+            {canAccessAdmin ? (
+              <DrawerNavLink
+                item={appNavAdminItem}
+                isActive={isActive(appNavAdminItem.href)}
+                onNavigate={onClose}
+                mutedWhenInactive={false}
+              />
+            ) : null}
+          </ul>
+
+          <ul className="mt-3 list-none space-y-1 border-t border-gray-100 pt-3">
+            <DrawerNavLink
+              item={appNavSupportItem}
+              isActive={isActive(appNavSupportItem.href)}
+              onNavigate={onClose}
+              mutedWhenInactive
+            />
           </ul>
         </nav>
 

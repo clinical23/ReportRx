@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { appNavAdminItem, appNavItems } from "@/components/layout/app-nav-items";
+import {
+  appNavAdminItem,
+  appNavPrimaryItems,
+  appNavSettingsItem,
+  appNavSupportItem,
+  type AppNavItem,
+} from "@/components/layout/app-nav-items";
 
 type Props = {
   workspaceSubtitle: string;
@@ -16,6 +22,36 @@ type Props = {
   signOutAction: () => Promise<void>;
 };
 
+function navLinkClass(active: boolean, muted: boolean) {
+  if (active) {
+    return "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors bg-teal-50 text-teal-700";
+  }
+  if (muted) {
+    return "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-gray-500 hover:bg-gray-50 hover:text-gray-800";
+  }
+  return "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900";
+}
+
+function SidebarNavLink({
+  item,
+  active,
+  iconMuted,
+}: {
+  item: AppNavItem;
+  active: boolean;
+  iconMuted: boolean;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link href={item.href} className={navLinkClass(active, iconMuted)}>
+      <Icon
+        className={`h-5 w-5 shrink-0 ${active ? "text-teal-600" : iconMuted ? "text-gray-400" : "text-gray-400"}`}
+      />
+      {item.label}
+    </Link>
+  );
+}
+
 export default function AppSidebar({
   workspaceSubtitle,
   canAccessAdmin,
@@ -25,10 +61,9 @@ export default function AppSidebar({
 }: Props) {
   const pathname = usePathname();
 
-  const navItems = canAccessCliniciansDirectory
-    ? appNavItems
-    : appNavItems.filter((item) => item.href !== "/clinicians");
-  const allItems = canAccessAdmin ? [...navItems, appNavAdminItem] : navItems;
+  const primaryItems = canAccessCliniciansDirectory
+    ? appNavPrimaryItems
+    : appNavPrimaryItems.filter((item) => item.href !== "/clinicians");
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -70,27 +105,44 @@ export default function AppSidebar({
 
       <nav className="flex-1 px-3 py-4" aria-label="Main navigation">
         <ul className="list-none space-y-1">
-          {allItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                    active
-                      ? "bg-teal-50 text-teal-700"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
-                >
-                  <Icon
-                    className={`h-5 w-5 shrink-0 ${active ? "text-teal-600" : "text-gray-400"}`}
-                  />
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
+          {primaryItems.map((item) => (
+            <li key={item.href}>
+              <SidebarNavLink
+                item={item}
+                active={isActive(item.href)}
+                iconMuted={false}
+              />
+            </li>
+          ))}
+        </ul>
+
+        <ul className="mt-3 list-none space-y-1 border-t border-gray-100 pt-3">
+          <li>
+            <SidebarNavLink
+              item={appNavSettingsItem}
+              active={isActive(appNavSettingsItem.href)}
+              iconMuted={false}
+            />
+          </li>
+          {canAccessAdmin ? (
+            <li>
+              <SidebarNavLink
+                item={appNavAdminItem}
+                active={isActive(appNavAdminItem.href)}
+                iconMuted={false}
+              />
+            </li>
+          ) : null}
+        </ul>
+
+        <ul className="mt-3 list-none space-y-1 border-t border-gray-100 pt-3">
+          <li>
+            <SidebarNavLink
+              item={appNavSupportItem}
+              active={isActive(appNavSupportItem.href)}
+              iconMuted={!isActive(appNavSupportItem.href)}
+            />
+          </li>
         </ul>
       </nav>
 
