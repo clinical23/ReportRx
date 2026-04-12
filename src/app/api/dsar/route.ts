@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { logAuditWithServerSupabase } from "@/lib/audit";
+import { buildDsarExportHtml } from "@/lib/dsar/build-dsar-html";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -112,6 +113,19 @@ export async function GET(request: Request) {
     .select("name, slug")
     .eq("id", profile.organisation_id)
     .maybeSingle();
+
+  const { data: adminContactRows } = await admin
+    .from("profiles")
+    .select("email")
+    .eq("organisation_id", profile.organisation_id)
+    .in("role", ["admin", "superadmin"])
+    .eq("is_active", true)
+    .not("email", "is", null)
+    .limit(1);
+
+  const privacyContactEmail =
+    (adminContactRows?.[0]?.email as string | undefined)?.trim() ||
+    "privacy@reportrx.co.uk";
 
   const { data: assignmentRows } = await admin
     .from("clinician_practice_assignments")
@@ -340,7 +354,7 @@ export async function GET(request: Request) {
 
   const { data: auditRows } = await admin
     .from("audit_logs")
-    .select("action, resource_type, created_at")
+    .select("action, resource_type, resource_id, metadata, created_at")
     .eq("user_id", subjectId)
     .order("created_at", { ascending: false })
     .limit(5000);
@@ -348,11 +362,21 @@ export async function GET(request: Request) {
   const audit_trail = (auditRows ?? []).map((r) => ({
     action: String(r.action),
     resource_type: String(r.resource_type),
+    resource_id: r.resource_id == null ? null : String(r.resource_id),
+    metadata:
+      r.metadata && typeof r.metadata === "object" && !Array.isArray(r.metadata)
+        ? (r.metadata as Record<string, unknown>)
+        : null,
     created_at: r.created_at as string,
   }));
 
-  const exportData = {
-    exported_at: new Date().toISOString(),
+  logAuditWithServerSupabase(supabase, "export", "dsar", undefined, {
+    requested_by: user.id,
+    ...(subjectId !== user.id ? { subject_user_id: subjectId } : {}),
+  });
+
+  const htmlContent = buildDsarExportHtml({
+    generatedAt: new Date(),
     subject: {
       name: profile.full_name,
       email,
@@ -361,26 +385,22 @@ export async function GET(request: Request) {
       created_at: accountCreatedAt,
     },
     organisation: {
-      name: orgRow?.name ?? "—",
-      slug: orgRow?.slug ?? null,
+      name: orgRow?.name?.trim() || "—",
     },
+    privacyContactEmail,
     practice_assignments,
     activity_logs,
     edits_by_me,
     edits_to_my_logs,
     audit_trail,
-  };
-
-  logAuditWithServerSupabase(supabase, "export", "dsar", undefined, {
-    requested_by: user.id,
-    ...(subjectId !== user.id ? { subject_user_id: subjectId } : {}),
   });
 
-  const fname = `reportrx-data-export-${filenameSafeName(profile.full_name)}-${new Date().toISOString().split("T")[0]}.json`;
+  const fname = `reportrx-data-export-${filenameSafeName(profile.full_name)}-${new Date().toISOString().split("T")[0]}.html`;
 
-  return new Response(JSON.stringify(exportData, null, 2), {
+  return new Response(htmlContent, {
+    status: 200,
     headers: {
-      "Content-Type": "application/json; charset=utf-8",
+      "Content-Type": "text/html; charset=utf-8",
       "Content-Disposition": `attachment; filename="${fname}"`,
     },
   });

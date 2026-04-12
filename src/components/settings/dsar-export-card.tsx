@@ -63,7 +63,7 @@ export function DsarExportCard({ lastExportAt }: Props) {
         res.headers.get("Content-Disposition"),
       );
       a.download =
-        fromHeader ?? `reportrx-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+        fromHeader ?? `reportrx-data-export-${new Date().toISOString().slice(0, 10)}.html`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success("Download started.");
