@@ -217,7 +217,7 @@ export default async function DashboardPage() {
               </div>
               {myRecent.length > 0 && (
                 <Link
-                  href="/activity"
+                  href="/reporting"
                   className="shrink-0 text-xs font-medium text-teal-700 hover:underline"
                 >
                   View all →
@@ -377,7 +377,7 @@ export default async function DashboardPage() {
             </div>
             {snap.recentEntries.length > 0 && (
               <Link
-                href="/activity"
+                href="/reporting"
                 className="shrink-0 text-xs font-medium text-primary hover:underline"
               >
                 View all →

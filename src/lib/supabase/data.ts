@@ -1,4 +1,6 @@
 import { londonMonthRangeISO } from "@/lib/datetime";
+import { computeComplianceStatus } from "@/lib/clinician-compliance";
+import type { ComplianceStatus } from "@/lib/clinician-compliance";
 
 import type { Clinician } from "./database.types";
 import { listOrgClinicianPracticeAssignments } from "@/lib/supabase/clinician-practice-assignments";
@@ -48,6 +50,10 @@ export type TeamMemberRow = {
     restricted: boolean;
     names_csv: string;
   };
+  /** Linked `clinicians` row (clinical profiles only). */
+  clinician_id: string | null;
+  /** Precomputed from `clinician_details` for admin overview. */
+  compliance_status: ComplianceStatus;
 };
 
 /**
@@ -166,7 +172,7 @@ export async function listOrganisationTeamMembers(
     return a > b ? a : b;
   };
 
-  return rows.map((p) => {
+  const baseRows = rows.map((p) => {
     const name = String(p.full_name ?? "").trim() || "—";
     const email = String(p.email ?? "").trim() || "—";
     const cid = p.clinician_id ? String(p.clinician_id) : null;
@@ -223,6 +229,53 @@ export async function listOrganisationTeamMembers(
       last_activity_date: lastActivity,
       practices_label,
       clinician_assignment,
+      clinician_id: cid,
+    };
+  });
+
+  const clinicianIds = [
+    ...new Set(
+      baseRows
+        .map((r) => r.clinician_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  if (clinicianIds.length === 0) {
+    return baseRows.map((r) => ({
+      ...r,
+      compliance_status: r.clinician_id ? ("bad" as const) : ("na" as const),
+    }));
+  }
+
+  const { data: detailRows, error: detErr } = await supabase
+    .from("clinician_details")
+    .select("*")
+    .in("clinician_id", clinicianIds);
+
+  if (detErr) {
+    console.error(
+      "[listOrganisationTeamMembers] clinician_details",
+      detErr.message,
+    );
+    return baseRows.map((r) => ({
+      ...r,
+      compliance_status: r.clinician_id ? ("bad" as const) : ("na" as const),
+    }));
+  }
+
+  const detailByClinician = new Map(
+    (detailRows ?? []).map((d) => [d.clinician_id, d]),
+  );
+
+  return baseRows.map((r) => {
+    if (!r.clinician_id) {
+      return { ...r, compliance_status: "na" as const };
+    }
+    const det = detailByClinician.get(r.clinician_id);
+    return {
+      ...r,
+      compliance_status: computeComplianceStatus(det),
     };
   });
 }

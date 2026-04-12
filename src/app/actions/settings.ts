@@ -185,18 +185,26 @@ export async function updateCategory(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("activity_categories")
     .update({ name })
     .eq("id", categoryId)
-    .eq("organisation_id", profile.organisation_id);
+    .eq("organisation_id", profile.organisation_id)
+    .select("id");
 
   if (error) {
     console.error("[updateCategory]", error.message);
     if (error.code === "23505") {
       return { success: false, error: "A category with that name already exists." };
     }
-    return { success: false, error: "Could not update category." };
+    return { success: false, error: error.message || "Could not update category." };
+  }
+  if (!updated?.length) {
+    return {
+      success: false,
+      error:
+        "Could not update category. It may be missing or not in your organisation.",
+    };
   }
 
   revalidatePath("/settings");
@@ -215,15 +223,23 @@ export async function archiveCategory(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("activity_categories")
     .update({ is_active: false })
     .eq("id", categoryId)
-    .eq("organisation_id", profile.organisation_id);
+    .eq("organisation_id", profile.organisation_id)
+    .select("id");
 
   if (error) {
     console.error("[archiveCategory]", error.message);
-    return { success: false, error: "Could not archive category." };
+    return { success: false, error: error.message || "Could not archive category." };
+  }
+  if (!updated?.length) {
+    return {
+      success: false,
+      error:
+        "Could not archive category. It may be missing or not in your organisation.",
+    };
   }
 
   revalidatePath("/settings");
@@ -242,15 +258,23 @@ export async function unarchiveCategory(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("activity_categories")
     .update({ is_active: true })
     .eq("id", categoryId)
-    .eq("organisation_id", profile.organisation_id);
+    .eq("organisation_id", profile.organisation_id)
+    .select("id");
 
   if (error) {
     console.error("[unarchiveCategory]", error.message);
-    return { success: false, error: "Could not restore category." };
+    return { success: false, error: error.message || "Could not restore category." };
+  }
+  if (!updated?.length) {
+    return {
+      success: false,
+      error:
+        "Could not restore category. It may be missing or not in your organisation.",
+    };
   }
 
   revalidatePath("/settings");
@@ -289,7 +313,7 @@ export async function reorderCategory(
 
   const j = direction === "up" ? i - 1 : i + 1;
   if (j < 0 || j >= list.length) {
-    return { success: true };
+    return { success: false, error: "Cannot move this category further." };
   }
 
   const a = list[i];
@@ -297,26 +321,34 @@ export async function reorderCategory(
   const aSo = a.sort_order;
   const bSo = b.sort_order;
 
-  const { error: e1 } = await supabase
+  const { data: u1, error: e1 } = await supabase
     .from("activity_categories")
     .update({ sort_order: bSo })
     .eq("id", a.id)
-    .eq("organisation_id", profile.organisation_id);
+    .eq("organisation_id", profile.organisation_id)
+    .select("id");
 
   if (e1) {
     console.error("[reorderCategory] a", e1.message);
-    return { success: false, error: "Could not reorder." };
+    return { success: false, error: e1.message || "Could not reorder." };
+  }
+  if (!u1?.length) {
+    return { success: false, error: "Could not reorder (category not found)." };
   }
 
-  const { error: e2 } = await supabase
+  const { data: u2, error: e2 } = await supabase
     .from("activity_categories")
     .update({ sort_order: aSo })
     .eq("id", b.id)
-    .eq("organisation_id", profile.organisation_id);
+    .eq("organisation_id", profile.organisation_id)
+    .select("id");
 
   if (e2) {
     console.error("[reorderCategory] b", e2.message);
-    return { success: false, error: "Could not reorder." };
+    return { success: false, error: e2.message || "Could not reorder." };
+  }
+  if (!u2?.length) {
+    return { success: false, error: "Could not reorder (category not found)." };
   }
 
   revalidatePath("/settings");

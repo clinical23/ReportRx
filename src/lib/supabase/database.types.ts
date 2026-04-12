@@ -243,6 +243,91 @@ export interface Database {
           },
         ];
       };
+      clinician_details: {
+        Row: {
+          id: string;
+          clinician_id: string;
+          organisation_id: string;
+          clinical_role: string | null;
+          gphc_number: string | null;
+          dbs_number: string | null;
+          dbs_expiry: string | null;
+          indemnity_provider: string | null;
+          indemnity_number: string | null;
+          indemnity_expiry: string | null;
+          smartcard_number: string | null;
+          admin_notes: string | null;
+          updated_at: string | null;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          clinician_id: string;
+          organisation_id: string;
+          clinical_role?: string | null;
+          gphc_number?: string | null;
+          dbs_number?: string | null;
+          dbs_expiry?: string | null;
+          indemnity_provider?: string | null;
+          indemnity_number?: string | null;
+          indemnity_expiry?: string | null;
+          smartcard_number?: string | null;
+          admin_notes?: string | null;
+          updated_at?: string | null;
+          updated_by?: string | null;
+        };
+        Update: {
+          clinical_role?: string | null;
+          gphc_number?: string | null;
+          dbs_number?: string | null;
+          dbs_expiry?: string | null;
+          indemnity_provider?: string | null;
+          indemnity_number?: string | null;
+          indemnity_expiry?: string | null;
+          smartcard_number?: string | null;
+          admin_notes?: string | null;
+          updated_at?: string | null;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      clinician_documents: {
+        Row: {
+          id: string;
+          clinician_id: string;
+          organisation_id: string;
+          document_type: string;
+          file_name: string;
+          file_path: string;
+          file_size: number | null;
+          mime_type: string | null;
+          uploaded_by: string;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          clinician_id: string;
+          organisation_id: string;
+          document_type: string;
+          file_name: string;
+          file_path: string;
+          file_size?: number | null;
+          mime_type?: string | null;
+          uploaded_by: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          document_type?: string;
+          file_name?: string;
+          file_path?: string;
+          file_size?: number | null;
+          mime_type?: string | null;
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;

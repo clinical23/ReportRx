@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Users } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  MinusCircle,
+  Users,
+  XCircle,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatDateUK } from "@/lib/datetime";
@@ -10,6 +16,10 @@ import type { TeamMemberRow } from "@/lib/supabase/data";
 import { formatRoleLabel } from "@/lib/role-format";
 import { cn } from "@/lib/utils";
 import { TeamMemberAdminActions } from "@/components/clinicians/team-member-admin-actions";
+import {
+  TeamMemberEditDialog,
+  type TeamMemberEditTab,
+} from "@/components/clinicians/team-member-edit-dialog";
 
 type Props = {
   members: TeamMemberRow[];
@@ -27,6 +37,94 @@ function practicesDisplay(row: TeamMemberRow) {
     return row.clinician_assignment.names_csv || "—";
   }
   return row.practices_label;
+}
+
+function ComplianceIndicator({
+  status,
+  onClick,
+  title,
+}: {
+  status: TeamMemberRow["compliance_status"];
+  onClick?: () => void;
+  title: string;
+}) {
+  const common =
+    "inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors";
+  if (status === "na") {
+    return (
+      <span
+        className={cn(common, "border-gray-100 bg-gray-50 text-gray-400")}
+        title={title}
+      >
+        <MinusCircle className="h-5 w-5" aria-hidden />
+      </span>
+    );
+  }
+  const interactive =
+    onClick &&
+    "cursor-pointer hover:border-teal-200 hover:bg-teal-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/30";
+  if (status === "ok") {
+    return (
+      <button
+        type="button"
+        title={title}
+        onClick={onClick}
+        disabled={!onClick}
+        className={cn(
+          common,
+          "border-emerald-100 bg-emerald-50 text-emerald-700",
+          interactive,
+        )}
+      >
+        <CheckCircle2 className="h-5 w-5" aria-hidden />
+      </button>
+    );
+  }
+  if (status === "warning") {
+    return (
+      <button
+        type="button"
+        title={title}
+        onClick={onClick}
+        disabled={!onClick}
+        className={cn(
+          common,
+          "border-amber-100 bg-amber-50 text-amber-800",
+          interactive,
+        )}
+      >
+        <AlertTriangle className="h-5 w-5" aria-hidden />
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      disabled={!onClick}
+      className={cn(
+        common,
+        "border-red-100 bg-red-50 text-red-700",
+        interactive,
+      )}
+    >
+      <XCircle className="h-5 w-5" aria-hidden />
+    </button>
+  );
+}
+
+function complianceTitle(status: TeamMemberRow["compliance_status"]): string {
+  switch (status) {
+    case "ok":
+      return "Compliance complete — click to open professional details";
+    case "warning":
+      return "Expiry within 30 days — click to review";
+    case "bad":
+      return "Missing or expired compliance — click to fix";
+    default:
+      return "Not applicable for this account type";
+  }
 }
 
 function roleBadgeClass(role: string): string {
@@ -48,6 +146,13 @@ function roleBadgeClass(role: string): string {
 
 export function CliniciansView({ members, viewerRole, viewerUserId }: Props) {
   const [showInactive, setShowInactive] = useState(false);
+  const [editState, setEditState] = useState<{
+    member: TeamMemberRow;
+    tab: TeamMemberEditTab;
+  } | null>(null);
+
+  const showComplianceCol =
+    viewerRole === "admin" || viewerRole === "superadmin";
 
   const visible = useMemo(() => {
     if (showInactive) return members;
@@ -133,11 +238,32 @@ export function CliniciansView({ members, viewerRole, viewerUserId }: Props) {
                 <p className="mt-2 text-xs text-gray-600">
                   Practices: {practicesDisplay(row)}
                 </p>
+                {showComplianceCol ? (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-gray-600">
+                    <span>Compliance:</span>
+                    <ComplianceIndicator
+                      status={row.compliance_status}
+                      title={complianceTitle(row.compliance_status)}
+                      onClick={
+                        row.clinician_id
+                          ? () =>
+                              setEditState({
+                                member: row,
+                                tab: "professional",
+                              })
+                          : undefined
+                      }
+                    />
+                  </div>
+                ) : null}
                 <div className="mt-3 flex justify-end border-t border-gray-100 pt-3">
                   <TeamMemberAdminActions
                     member={row}
                     viewerRole={viewerRole}
                     viewerUserId={viewerUserId}
+                    onOpenEdit={(tab) =>
+                      setEditState({ member: row, tab })
+                    }
                   />
                 </div>
               </div>
@@ -183,6 +309,11 @@ export function CliniciansView({ members, viewerRole, viewerUserId }: Props) {
                 <th className="px-4 py-3 text-xs font-medium text-gray-500">
                   Practices
                 </th>
+                {showComplianceCol ? (
+                  <th className="px-4 py-3 text-xs font-medium text-gray-500">
+                    Compliance
+                  </th>
+                ) : null}
                 {viewerRole === "admin" || viewerRole === "superadmin" ? (
                   <th className="px-4 py-3 text-xs font-medium text-gray-500">
                     Actions
@@ -231,13 +362,33 @@ export function CliniciansView({ members, viewerRole, viewerUserId }: Props) {
                   <td className="min-w-[8rem] max-w-[14rem] px-4 py-3 text-gray-700">
                     {practicesDisplay(row)}
                   </td>
+                  {showComplianceCol ? (
+                    <td className="px-4 py-3">
+                      <ComplianceIndicator
+                        status={row.compliance_status}
+                        title={complianceTitle(row.compliance_status)}
+                        onClick={
+                          row.clinician_id
+                            ? () =>
+                                setEditState({
+                                  member: row,
+                                  tab: "professional",
+                                })
+                            : undefined
+                        }
+                      />
+                    </td>
+                  ) : null}
                   {viewerRole === "admin" || viewerRole === "superadmin" ? (
                     <td className="whitespace-nowrap px-4 py-3">
                       <TeamMemberAdminActions
-                    member={row}
-                    viewerRole={viewerRole}
-                    viewerUserId={viewerUserId}
-                  />
+                        member={row}
+                        viewerRole={viewerRole}
+                        viewerUserId={viewerUserId}
+                        onOpenEdit={(tab) =>
+                          setEditState({ member: row, tab })
+                        }
+                      />
                     </td>
                   ) : null}
                 </tr>
@@ -246,6 +397,17 @@ export function CliniciansView({ members, viewerRole, viewerUserId }: Props) {
           </table>
         )}
       </div>
+
+      <TeamMemberEditDialog
+        open={!!editState}
+        onOpenChange={(o) => {
+          if (!o) setEditState(null);
+        }}
+        member={editState?.member ?? null}
+        initialTab={editState?.tab ?? "basic"}
+        viewerRole={viewerRole}
+        viewerUserId={viewerUserId}
+      />
     </div>
   );
 }

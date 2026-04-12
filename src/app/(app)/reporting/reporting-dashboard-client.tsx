@@ -318,13 +318,17 @@ export function ReportingDashboardClient({
     return { overallCompletenessPct: pct, overallTone: dataCompletenessClass(pct) }
   }, [dataCompleteness])
 
-  const practiceChartData = useMemo(
-    () =>
-      byPractice.map((p, idx) => ({
-        ...p,
-        fill: ['#0D9488', '#0EA5E9', '#6366F1', '#F59E0B', '#14B8A6'][idx % 5],
-      })),
-    [byPractice],
+  const practiceChartData = useMemo(() => {
+    const withData = byPractice.filter((p) => p.total_count > 0)
+    return withData.map((p, idx) => ({
+      ...p,
+      fill: ['#0D9488', '#0EA5E9', '#6366F1', '#F59E0B', '#14B8A6'][idx % 5],
+    }))
+  }, [byPractice])
+
+  const categoryChartData = useMemo(
+    () => byCategory.filter((c) => c.total_count > 0),
+    [byCategory],
   )
 
   return (
@@ -538,28 +542,32 @@ export function ReportingDashboardClient({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
           <h2 className="mb-3 text-sm font-semibold text-gray-900">Appointments by category</h2>
-          {byCategory.length === 0 ? (
+          {categoryChartData.length === 0 ? (
             <p className="py-12 text-center text-sm text-gray-500">No category data for this period.</p>
           ) : (
             <div
               className="w-full min-w-0"
               style={{
-                height: Math.max(400, byCategory.length * 36),
+                height: Math.max(400, categoryChartData.length * 40),
               }}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={byCategory}
+                  data={categoryChartData}
                   layout="vertical"
-                  margin={{ top: 5, right: 30, left: 180, bottom: 28 }}
+                  margin={{ top: 8, right: 30, left: 180, bottom: 30 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis
                     type="number"
+                    tick={{ fontSize: 11 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={56}
                     label={{
                       value: 'Appointments',
                       position: 'insideBottom',
-                      offset: -2,
+                      offset: -4,
                     }}
                   />
                   <YAxis
@@ -585,29 +593,33 @@ export function ReportingDashboardClient({
             <div
               className="w-full min-w-0"
               style={{
-                height: Math.max(400, practiceChartData.length * 35),
+                height: Math.max(400, practiceChartData.length * 40),
               }}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={practiceChartData}
                   layout="vertical"
-                  margin={{ top: 5, right: 30, left: 200, bottom: 28 }}
+                  margin={{ top: 8, right: 30, left: 200, bottom: 30 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis
                     type="number"
+                    tick={{ fontSize: 11 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={56}
                     label={{
                       value: 'Appointments',
                       position: 'insideBottom',
-                      offset: -2,
+                      offset: -4,
                     }}
                   />
                   <YAxis
                     type="category"
                     dataKey="practice_name"
                     width={190}
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 11 }}
                     interval={0}
                     tickFormatter={(v) => truncateYAxisLabel(v, 30)}
                   />
@@ -631,7 +643,10 @@ export function ReportingDashboardClient({
         ) : (
           <div className="h-64 md:h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dailyTrend} margin={{ left: 8, right: 8 }}>
+              <AreaChart
+                data={dailyTrend}
+                margin={{ left: 8, right: 8, bottom: 30 }}
+              >
                 <defs>
                   <linearGradient id="tealFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#0D9488" stopOpacity={0.35} />
@@ -639,7 +654,13 @@ export function ReportingDashboardClient({
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                />
                 <YAxis />
                 <Tooltip formatter={appointmentsTooltipFormatter} />
                 <Area type="monotone" dataKey="total_appointments" stroke="#0D9488" fill="url(#tealFill)" />

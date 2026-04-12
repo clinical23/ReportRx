@@ -80,6 +80,7 @@ export function SettingsPageClient({
   const router = useRouter();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
+  const [catPending, startCatTransition] = useTransition();
   const [profileFlash, setProfileFlash] = useState<{ message: string; ok: boolean } | null>(null);
   const [orgFlash, setOrgFlash] = useState<{ message: string; ok: boolean } | null>(null);
   const [catFlash, setCatFlash] = useState<{ message: string; ok: boolean } | null>(null);
@@ -158,7 +159,7 @@ export function SettingsPageClient({
     const fd = new FormData();
     fd.set("name", newCatName.trim());
     setCatFlash(null);
-    startTransition(async () => {
+    startCatTransition(async () => {
       const r = await createCategory(fd);
       if (r.success) {
         setNewCatName("");
@@ -178,7 +179,7 @@ export function SettingsPageClient({
     fd.set("category_id", categoryId);
     fd.set("name", (renameValues[categoryId] ?? "").trim());
     setCatFlash(null);
-    startTransition(async () => {
+    startCatTransition(async () => {
       const r = await updateCategory(fd);
       setCatFlash(r.success ? { message: "Categories updated", ok: true } : { message: r.error, ok: false });
       if (r.success) {
@@ -193,7 +194,7 @@ export function SettingsPageClient({
     const fd = new FormData();
     fd.set("category_id", categoryId);
     setCatFlash(null);
-    startTransition(async () => {
+    startCatTransition(async () => {
       const r = await archiveCategory(fd);
       setCatFlash(r.success ? { message: "Categories updated", ok: true } : { message: r.error, ok: false });
       if (r.success) {
@@ -208,7 +209,7 @@ export function SettingsPageClient({
     const fd = new FormData();
     fd.set("category_id", categoryId);
     setCatFlash(null);
-    startTransition(async () => {
+    startCatTransition(async () => {
       const r = await unarchiveCategory(fd);
       setCatFlash(r.success ? { message: "Categories updated", ok: true } : { message: r.error, ok: false });
       if (r.success) {
@@ -224,7 +225,7 @@ export function SettingsPageClient({
     fd.set("category_id", categoryId);
     fd.set("direction", direction);
     setCatFlash(null);
-    startTransition(async () => {
+    startCatTransition(async () => {
       const r = await reorderCategory(fd);
       if (!r.success) {
         setCatFlash({ message: r.error, ok: false });
@@ -488,7 +489,7 @@ export function SettingsPageClient({
                 </div>
                 <Button
                   type="submit"
-                  disabled={pending || !newCatName.trim()}
+                  disabled={catPending || !newCatName.trim()}
                   className="min-h-11 w-full shrink-0 bg-teal-600 text-white hover:bg-teal-700 sm:w-auto sm:min-h-0"
                 >
                   Add category
@@ -524,7 +525,7 @@ export function SettingsPageClient({
                           variant="outline"
                           size="icon"
                           className="h-11 w-11 md:h-8 md:w-8"
-                          disabled={pending || idx === 0}
+                          disabled={catPending || idx === 0}
                           onClick={() => doReorder(c.id, "up")}
                           aria-label={`Move ${c.name} up`}
                         >
@@ -535,7 +536,7 @@ export function SettingsPageClient({
                           variant="outline"
                           size="icon"
                           className="h-11 w-11 md:h-8 md:w-8"
-                          disabled={pending || idx >= initialCategories.length - 1}
+                          disabled={catPending || idx >= initialCategories.length - 1}
                           onClick={() => doReorder(c.id, "down")}
                           aria-label={`Move ${c.name} down`}
                         >
@@ -560,9 +561,10 @@ export function SettingsPageClient({
                             variant="secondary"
                             size="sm"
                             disabled={
-                              pending ||
+                              catPending ||
                               (renameValues[c.id] ?? c.name).trim() === "" ||
-                              (renameValues[c.id] ?? c.name).trim() === c.name
+                              (renameValues[c.id] ?? c.name).trim() ===
+                                c.name.trim()
                             }
                             onClick={() => saveRename(c.id)}
                           >
@@ -588,7 +590,7 @@ export function SettingsPageClient({
                               variant="outline"
                               size="sm"
                               className="text-red-700"
-                              disabled={pending}
+                              disabled={catPending}
                               onClick={() => doArchive(c.id)}
                             >
                               Archive
@@ -598,7 +600,7 @@ export function SettingsPageClient({
                               type="button"
                               variant="outline"
                               size="sm"
-                              disabled={pending}
+                              disabled={catPending}
                               onClick={() => doUnarchive(c.id)}
                             >
                               Restore
