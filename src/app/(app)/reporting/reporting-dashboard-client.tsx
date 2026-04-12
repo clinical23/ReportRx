@@ -426,7 +426,10 @@ export function ReportingDashboardClient({
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-sm font-semibold text-gray-900">Data completeness</h2>
-          <p className="text-xs text-gray-500">Weekdays (Mon–Fri) with a log vs expected in range</p>
+          <p className="text-xs text-gray-500">
+            Days with a log vs expected days (each clinician&apos;s pattern plus
+            approved extra days) in range
+          </p>
         </div>
         <div className="mt-4 flex flex-wrap items-baseline gap-3">
           <span

@@ -247,6 +247,7 @@ export interface Database {
           is_active: boolean;
           practice_id: string | null;
           clinician_id: string | null;
+          working_days: number[] | null;
           updated_at?: string | null;
         };
         Insert: {
@@ -258,6 +259,7 @@ export interface Database {
           is_active?: boolean;
           practice_id?: string | null;
           clinician_id?: string | null;
+          working_days?: number[] | null;
           updated_at?: string | null;
         };
         Update: {
@@ -268,6 +270,7 @@ export interface Database {
           is_active?: boolean;
           practice_id?: string | null;
           clinician_id?: string | null;
+          working_days?: number[] | null;
           updated_at?: string | null;
         };
         Relationships: [
@@ -286,6 +289,35 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      additional_working_days: {
+        Row: {
+          id: string;
+          clinician_id: string;
+          work_date: string;
+          reason: string | null;
+          approved_by: string;
+          organisation_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          clinician_id: string;
+          work_date: string;
+          reason?: string | null;
+          approved_by: string;
+          organisation_id: string;
+          created_at?: string;
+        };
+        Update: {
+          clinician_id?: string;
+          work_date?: string;
+          reason?: string | null;
+          approved_by?: string;
+          organisation_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       audit_logs: {
         Row: {

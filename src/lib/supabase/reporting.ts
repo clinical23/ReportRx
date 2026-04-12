@@ -1,5 +1,9 @@
 import { getProfile } from '@/lib/supabase/auth'
 import { createClient } from '@/lib/supabase/server'
+import {
+  buildExpectedDateSet,
+  normalizeWorkingDays,
+} from '@/lib/working-pattern'
 
 /** null = no practice filter; [] = impossible scope (no matching practices). */
 export type ReportingPracticeScope = string[] | null
@@ -138,78 +142,91 @@ export type DataCompletenessRow = {
   completeness_pct: number
 }
 
-/** Weekday (Mon–Fri) count for ISO calendar dates [start, end], using UTC date arithmetic. */
-function countWeekdaysInclusive(startDate: string, endDate: string): number {
-  const start = new Date(`${startDate.slice(0, 10)}T00:00:00.000Z`).getTime()
-  const end = new Date(`${endDate.slice(0, 10)}T00:00:00.000Z`).getTime()
-  if (Number.isNaN(start) || Number.isNaN(end) || start > end) {
-    return 0
-  }
-  let n = 0
-  for (let t = start; t <= end; t += 86_400_000) {
-    const wd = new Date(t).getUTCDay()
-    if (wd >= 1 && wd <= 5) n++
-  }
-  return n
-}
-
-function isUtcWeekdayIso(isoYmd: string): boolean {
-  const t = new Date(`${isoYmd.slice(0, 10)}T00:00:00.000Z`).getTime()
-  if (Number.isNaN(t)) return false
-  const wd = new Date(t).getUTCDay()
-  return wd >= 1 && wd <= 5
-}
-
 /**
- * Active org members who should log, vs distinct weekdays (Mon–Fri) with any activity_logs row.
+ * Per-clinician completeness: expected days = working pattern + approved additional days
+ * in range (de-duplicated); logged days = distinct dates with activity on expected days only.
  */
-function dataCompletenessFromRows(
+async function fetchDataCompletenessForOrganisation(
+  organisationId: string,
   rows: ActivityReportRow[],
   startDate: string,
   endDate: string,
-  expected: number,
-): DataCompletenessRow[] {
-  const loggedDatesByClinician = new Map<string, Set<string>>()
-  const nameByClinician = new Map<string, string>()
+  clinicianScope: ReportingClinicianScope,
+): Promise<DataCompletenessRow[]> {
+  const supabase = await createClient()
+  const start = startDate.slice(0, 10)
+  const end = endDate.slice(0, 10)
 
-  for (const row of rows) {
-    const clinicianId = String(row.clinician_id ?? '').trim()
-    if (!clinicianId) continue
-    const name = String(row.clinician_name ?? '').trim() || 'Unknown user'
-    const dateStr = String(row.log_date ?? '').slice(0, 10)
-    if (!dateStr || dateStr < startDate.slice(0, 10) || dateStr > endDate.slice(0, 10)) continue
-    if (!isUtcWeekdayIso(dateStr)) continue
-    nameByClinician.set(clinicianId, name)
-    if (!loggedDatesByClinician.has(clinicianId)) {
-      loggedDatesByClinician.set(clinicianId, new Set())
-    }
-    loggedDatesByClinician.get(clinicianId)!.add(dateStr)
+  const { data: profData } = await supabase
+    .from('profiles')
+    .select('id, full_name, working_days')
+    .eq('organisation_id', organisationId)
+    .eq('role', 'clinician')
+
+  let clinicians = (profData ?? []) as Array<{
+    id: string
+    full_name: string | null
+    working_days: unknown
+  }>
+
+  if (clinicianScope != null && clinicianScope.length > 0) {
+    const allow = new Set(clinicianScope)
+    clinicians = clinicians.filter((p) => allow.has(p.id))
   }
 
-  if (loggedDatesByClinician.size === 0) return []
+  const { data: addl } = await supabase
+    .from('additional_working_days')
+    .select('clinician_id, work_date')
+    .eq('organisation_id', organisationId)
+    .gte('work_date', start)
+    .lte('work_date', end)
 
-  if (expected === 0) {
-    return Array.from(loggedDatesByClinician.keys()).map((clinicianId) => {
-      return {
-        clinician_name: nameByClinician.get(clinicianId) ?? 'Unknown user',
-        expected_days: 0,
-        logged_days: 0,
-        missing_days: 0,
-        completeness_pct: 100,
-      }
-    })
+  const additionalByClinician = new Map<string, Set<string>>()
+  for (const r of addl ?? []) {
+    const cid = String(r.clinician_id)
+    const wd = String(r.work_date).slice(0, 10)
+    if (!additionalByClinician.has(cid)) additionalByClinician.set(cid, new Set())
+    additionalByClinician.get(cid)!.add(wd)
+  }
+
+  const expectedById = new Map<string, Set<string>>()
+  const nameById = new Map<string, string>()
+  for (const c of clinicians) {
+    const wn = normalizeWorkingDays(c.working_days)
+    const extra = additionalByClinician.get(c.id) ?? new Set<string>()
+    const exp = buildExpectedDateSet(wn, extra, start, end)
+    expectedById.set(c.id, exp)
+    nameById.set(c.id, c.full_name?.trim() || 'Unknown user')
+  }
+
+  const loggedInExpected = new Map<string, Set<string>>()
+  for (const row of rows) {
+    const cid = String(row.clinician_id ?? '').trim()
+    if (!cid) continue
+    const exp = expectedById.get(cid)
+    if (!exp) continue
+    const d = String(row.log_date ?? '').slice(0, 10)
+    if (!d || d < start || d > end) continue
+    if (!exp.has(d)) continue
+    if (!loggedInExpected.has(cid)) loggedInExpected.set(cid, new Set())
+    loggedInExpected.get(cid)!.add(d)
   }
 
   const outputRows: DataCompletenessRow[] = []
-  for (const [clinicianId, loggedDates] of loggedDatesByClinician.entries()) {
-    const logged_days = loggedDates.size
-    const missing_days = Math.max(0, expected - logged_days)
+  for (const c of clinicians) {
+    const exp = expectedById.get(c.id)!
+    if (exp.size === 0) continue
+    const logged = loggedInExpected.get(c.id) ?? new Set()
+    const logged_days = logged.size
+    const expected_days = exp.size
+    const missing_days = Math.max(0, expected_days - logged_days)
     const completeness_pct =
-      expected > 0 ? Math.round((logged_days / expected) * 1000) / 10 : 100
-
+      expected_days > 0
+        ? Math.round((logged_days / expected_days) * 1000) / 10
+        : 100
     outputRows.push({
-      clinician_name: nameByClinician.get(clinicianId) ?? 'Unknown user',
-      expected_days: expected,
+      clinician_name: nameById.get(c.id)!,
+      expected_days,
       logged_days,
       missing_days,
       completeness_pct,
@@ -229,10 +246,15 @@ export async function getDataCompleteness(
   practiceScope?: ReportingPracticeScope,
   clinicianKeys?: ReportingClinicianScope,
 ): Promise<DataCompletenessRow[]> {
-  await getProfile()
-  const expected = countWeekdaysInclusive(startDate, endDate)
+  const profile = await getProfile()
   const rows = await fetchRowsForRange(startDate, endDate, practiceScope, clinicianKeys)
-  return dataCompletenessFromRows(rows, startDate, endDate, expected)
+  return fetchDataCompletenessForOrganisation(
+    profile.organisation_id,
+    rows,
+    startDate,
+    endDate,
+    clinicianKeys ?? null,
+  )
 }
 
 export type MyActivitySummary = {
@@ -630,9 +652,15 @@ export async function loadReportingDashboardData(
   recentLogs: RecentLogItem[]
   dataCompleteness: DataCompletenessRow[]
 }> {
-  await getProfile()
+  const profile = await getProfile()
   const rows = await fetchRowsForRange(startDate, endDate, practiceScope, clinicianKeys)
-  const expected = countWeekdaysInclusive(startDate, endDate)
+  const dataCompleteness = await fetchDataCompletenessForOrganisation(
+    profile.organisation_id,
+    rows,
+    startDate,
+    endDate,
+    clinicianKeys ?? null,
+  )
   return {
     summary: reportingSummaryFromRows(rows),
     byCategory: appointmentsByCategoryFromRows(rows),
@@ -640,7 +668,7 @@ export async function loadReportingDashboardData(
     dailyTrend: dailyTrendFromRows(rows),
     clinicianBreakdown: clinicianBreakdownFromRows(rows),
     recentLogs: recentLogsFromRows(rows, 10),
-    dataCompleteness: dataCompletenessFromRows(rows, startDate, endDate, expected),
+    dataCompleteness,
   }
 }
 

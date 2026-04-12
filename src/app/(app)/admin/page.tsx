@@ -10,10 +10,13 @@ import { RegisterPageView } from '@/components/audit/register-page-view'
 import { AdminExportUserData } from '@/components/admin/admin-export-user-data'
 import { AdminBulkInviteForm } from '@/components/admin/admin-bulk-invite-form'
 import { AdminInviteForm } from '@/components/admin/admin-invite-form'
+import { AdminAdditionalWorkingDays } from '@/components/admin/admin-additional-working-days'
 import { AdminPracticeAssignments } from '@/components/admin/admin-practice-assignments'
+import { AdminWorkingPatternModal } from '@/components/admin/admin-working-pattern-modal'
 import { requireRole } from '@/lib/supabase/auth'
 import {
   listOrganisations,
+  listOrgAdditionalWorkingDays,
   listPCNs,
   listPractices,
   listTeamMembers,
@@ -45,12 +48,14 @@ export default async function AdminPage({
   const organisations = await listOrganisations(profile)
   const currentOrgId = profile.organisation_id
 
-  const [pcns, practices, teamMembers, assignmentRows] = await Promise.all([
-    listPCNs(currentOrgId),
-    listPractices(currentOrgId),
-    listTeamMembers(currentOrgId),
-    listOrgClinicianPracticeAssignments(currentOrgId),
-  ])
+  const [pcns, practices, teamMembers, assignmentRows, additionalWorkingDays] =
+    await Promise.all([
+      listPCNs(currentOrgId),
+      listPractices(currentOrgId),
+      listTeamMembers(currentOrgId),
+      listOrgClinicianPracticeAssignments(currentOrgId),
+      listOrgAdditionalWorkingDays(currentOrgId),
+    ])
 
   const clinicianProfilesForAssignments = teamMembers
     .filter((m) => m.role === 'clinician')
@@ -63,6 +68,10 @@ export default async function AdminPage({
   const existingOrgEmails = teamMembers
     .map((m) => String(m.email ?? '').trim().toLowerCase())
     .filter(Boolean)
+
+  const cliniciansForAdditionalDays = teamMembers
+    .filter((m) => m.role === 'clinician')
+    .map((m) => ({ id: m.id, full_name: m.full_name }))
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -236,12 +245,13 @@ export default async function AdminPage({
               </p>
             </div>
           ) : (
-            <table className="w-full min-w-[40rem] text-sm">
+            <table className="w-full min-w-[44rem] text-sm">
               <thead className="bg-gray-50">
                 <tr className="text-left text-gray-600">
                   <th className="px-4 py-2.5 font-medium">Name</th>
                   <th className="px-4 py-2.5 font-medium">Email</th>
                   <th className="px-4 py-2.5 font-medium">Role</th>
+                  <th className="px-4 py-2.5 font-medium">Pattern</th>
                   <th className="px-4 py-2.5 font-medium">Status</th>
                   <th className="px-4 py-2.5 font-medium">Access</th>
                   <th className="px-4 py-2.5 font-medium">Update Role</th>
@@ -263,6 +273,13 @@ export default async function AdminPage({
                     >
                       {member.role}
                     </span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {member.role === 'clinician' ? (
+                      <AdminWorkingPatternModal member={member} />
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-2.5">
                     <span
@@ -343,6 +360,11 @@ export default async function AdminPage({
           </p>
         </div>
       </section>
+
+      <AdminAdditionalWorkingDays
+        clinicians={cliniciansForAdditionalDays}
+        initialRows={additionalWorkingDays}
+      />
 
       <AdminPracticeAssignments
         clinicians={clinicianProfilesForAssignments}

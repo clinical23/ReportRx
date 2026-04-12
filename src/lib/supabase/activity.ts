@@ -5,6 +5,11 @@ import {
 } from '@/lib/datetime'
 import { getProfile } from '@/lib/supabase/auth'
 import {
+  dayLabelForIsoWeekday,
+  isoWeekdayFromYmd,
+  normalizeWorkingDays,
+} from '@/lib/working-pattern'
+import {
   getAssignedPracticeIdsForProfile,
   isClinicianOnlyActivityRole,
 } from '@/lib/supabase/clinician-practice-assignments'
@@ -45,10 +50,12 @@ type ActivityLogEditRow = {
 
 export type MyWeekStatusItem = {
   date: string
-  dayName: 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri'
+  dayName: 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun'
   status: 'logged' | 'missing' | 'today' | 'future'
   practiceCount: number
   totalAppointments: number
+  /** True when this date is an admin-approved extra day outside the usual pattern */
+  isAdditionalDay?: boolean
 }
 
 function addDaysIso(isoDate: string, days: number): string {
@@ -65,15 +72,63 @@ function getLondonWeekMonday(todayIso: string): string {
   return d.toISOString().slice(0, 10)
 }
 
+export async function listAdditionalWorkDatesForClinician(
+  profileId: string,
+  organisationId: string,
+): Promise<string[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('additional_working_days')
+    .select('work_date')
+    .eq('organisation_id', organisationId)
+    .eq('clinician_id', profileId)
+
+  if (error) {
+    console.error('[listAdditionalWorkDatesForClinician]', error.message)
+    return []
+  }
+  const set = new Set(
+    (data ?? []).map((r) => String(r.work_date).slice(0, 10)),
+  )
+  return [...set].sort()
+}
+
 export async function getMyWeekStatus(
   userId: string,
   organisationId: string,
+  profileWorkingDays: unknown,
 ): Promise<MyWeekStatusItem[]> {
   const supabase = await createClient()
   const todayIso = todayISOInLondon()
   const monday = getLondonWeekMonday(todayIso)
-  const dates = [0, 1, 2, 3, 4].map((i) => addDaysIso(monday, i))
-  const friday = dates[4]
+  const sunday = addDaysIso(monday, 6)
+  const working = normalizeWorkingDays(profileWorkingDays)
+
+  const { data: addlRows } = await supabase
+    .from('additional_working_days')
+    .select('work_date')
+    .eq('clinician_id', userId)
+    .eq('organisation_id', organisationId)
+    .gte('work_date', monday)
+    .lte('work_date', sunday)
+
+  const additionalInWeek = new Set(
+    (addlRows ?? []).map((r) => String(r.work_date).slice(0, 10)),
+  )
+
+  const slotMeta: { date: string; isAdditionalDay: boolean }[] = []
+  for (let i = 0; i < 7; i++) {
+    const date = addDaysIso(monday, i)
+    const isoD = isoWeekdayFromYmd(date)
+    const onPattern = working.includes(isoD)
+    const extra = additionalInWeek.has(date)
+    if (onPattern || extra) {
+      slotMeta.push({
+        date,
+        isAdditionalDay: extra && !onPattern,
+      })
+    }
+  }
 
   const { data: logs, error: logsError } = await supabase
     .from('activity_logs')
@@ -81,17 +136,25 @@ export async function getMyWeekStatus(
     .eq('clinician_id', userId)
     .eq('organisation_id', organisationId)
     .gte('log_date', monday)
-    .lte('log_date', friday)
+    .lte('log_date', sunday)
 
   if (logsError) {
     console.error('[getMyWeekStatus.logs]', logsError.message)
-    return dates.map((date, idx) => ({
-      date,
-      dayName: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][idx] as MyWeekStatusItem['dayName'],
-      status: date === todayIso ? 'today' : date > todayIso ? 'future' : 'missing',
-      practiceCount: 0,
-      totalAppointments: 0,
-    }))
+    return slotMeta.map(({ date, isAdditionalDay }) => {
+      const isoD = isoWeekdayFromYmd(date)
+      let status: MyWeekStatusItem['status']
+      if (date > todayIso) status = 'future'
+      else if (date === todayIso) status = 'today'
+      else status = 'missing'
+      return {
+        date,
+        dayName: dayLabelForIsoWeekday(isoD),
+        status,
+        practiceCount: 0,
+        totalAppointments: 0,
+        isAdditionalDay,
+      }
+    })
   }
 
   const logIds = (logs ?? []).map((l) => String(l.id))
@@ -123,8 +186,8 @@ export async function getMyWeekStatus(
     day.appointments += apptsByLogId.get(String(log.id)) ?? 0
   }
 
-  return dates.map((date, idx) => {
-    const dayName = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][idx] as MyWeekStatusItem['dayName']
+  return slotMeta.map(({ date, isAdditionalDay }) => {
+    const isoD = isoWeekdayFromYmd(date)
     const aggregate = byDate.get(date)
     const hasLog = Boolean(aggregate)
     let status: MyWeekStatusItem['status']
@@ -134,12 +197,37 @@ export async function getMyWeekStatus(
 
     return {
       date,
-      dayName,
+      dayName: dayLabelForIsoWeekday(isoD),
       status,
       practiceCount: aggregate?.practiceIds.size ?? 0,
       totalAppointments: aggregate?.appointments ?? 0,
+      isAdditionalDay,
     }
   })
+}
+
+/** Whether this calendar date counts as a scheduled day (pattern or approved extra). */
+export async function isClinicianExpectedDayOnDate(
+  clinicianId: string,
+  organisationId: string,
+  isoDate: string,
+  profileWorkingDays: unknown,
+): Promise<boolean> {
+  const working = normalizeWorkingDays(profileWorkingDays)
+  const y = isoDate.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(y)) return false
+  if (working.includes(isoWeekdayFromYmd(y))) return true
+
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('additional_working_days')
+    .select('id')
+    .eq('clinician_id', clinicianId)
+    .eq('organisation_id', organisationId)
+    .eq('work_date', y)
+    .maybeSingle()
+
+  return Boolean(data)
 }
 
 export async function listPractices(): Promise<Practice[]> {

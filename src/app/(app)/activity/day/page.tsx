@@ -10,7 +10,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatDateLongUK } from "@/lib/datetime";
-import { getDailyBreakdown } from "@/lib/supabase/activity";
+import {
+  getDailyBreakdown,
+  isClinicianExpectedDayOnDate,
+} from "@/lib/supabase/activity";
 import { activityClinicianKeys } from "@/lib/supabase/clinician-scope";
 import { getAuthProfile, isAppRole } from "@/lib/supabase/auth-profile";
 import { getPracticeScopeIdsForSession } from "@/lib/supabase/practice-scope";
@@ -49,6 +52,24 @@ export default async function DailyBreakdownPage({ searchParams }: Props) {
     isClinician && profile ? activityClinicianKeys(profile) : null;
 
   const rows = await getDailyBreakdown(date, scope, clinicianKeys);
+
+  const profileOrgId =
+    profile &&
+    "organisation_id" in profile &&
+    typeof (profile as { organisation_id?: string }).organisation_id ===
+      "string"
+      ? (profile as { organisation_id: string }).organisation_id
+      : null;
+
+  const expectedDayForClinician =
+    isClinician && profile?.id && profileOrgId
+      ? await isClinicianExpectedDayOnDate(
+          profile.id,
+          profileOrgId,
+          date,
+          profile.working_days,
+        )
+      : true;
 
   // Aggregate stats
   const totalAppointments = rows.reduce((s, r) => s + r.appointment_count, 0);
@@ -155,9 +176,16 @@ export default async function DailyBreakdownPage({ searchParams }: Props) {
       {rows.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-sm text-slate-400">
-              No activity recorded for {dateLabel}.
-            </p>
+            {isClinician && !expectedDayForClinician ? (
+              <p className="text-sm text-slate-500">
+                No activity for {dateLabel}. This date is outside your usual
+                working pattern, so it is not shown as a missing log.
+              </p>
+            ) : (
+              <p className="text-sm text-slate-400">
+                No activity recorded for {dateLabel}.
+              </p>
+            )}
           </CardContent>
         </Card>
       ) : (

@@ -9,6 +9,7 @@ import {
   listPracticesForActivity,
   listActivityCategories,
   getMyWeekStatus,
+  listAdditionalWorkDatesForClinician,
   listRecentLogsGrouped,
 } from "@/lib/supabase/activity";
 import { activityClinicianKeys } from "@/lib/supabase/clinician-scope";
@@ -73,15 +74,33 @@ export default async function ActivityPage() {
     const recentClinicianKeys =
       isClinician && profile ? activityClinicianKeys(profile) : null
 
-    const [clinicians, practices, categories, recentLogs, weekStatus, orgRecord] =
-      await Promise.all([
-        listClinicians(),
-        practicesPromise,
-        listActivityCategories(),
-        listRecentLogsGrouped(10, scope, recentClinicianKeys),
-        profileOrgId && profile?.id ? getMyWeekStatus(profile.id, profileOrgId) : Promise.resolve([]),
-        orgRecordPromise,
-      ])
+    const loadWeekStrip = Boolean(profileOrgId && profile?.id)
+    const loadScheduleForForm =
+      isClinician &&
+      !isManager &&
+      Boolean(profileOrgId && profile?.id)
+
+    const [
+      clinicians,
+      practices,
+      categories,
+      recentLogs,
+      weekStatus,
+      orgRecord,
+      additionalWorkDatesForForm,
+    ] = await Promise.all([
+      listClinicians(),
+      practicesPromise,
+      listActivityCategories(),
+      listRecentLogsGrouped(10, scope, recentClinicianKeys),
+      loadWeekStrip && profile && profileOrgId
+        ? getMyWeekStatus(profile.id, profileOrgId, profile.working_days)
+        : Promise.resolve([]),
+      orgRecordPromise,
+      loadScheduleForForm && profile && profileOrgId
+        ? listAdditionalWorkDatesForClinician(profile.id, profileOrgId)
+        : Promise.resolve([]),
+    ])
 
     const defaultHoursPerDay = parseDefaultHoursPerDay(orgRecord?.settings ?? null)
 
@@ -127,6 +146,9 @@ export default async function ActivityPage() {
           defaultPracticeId={profile?.practice_id ?? null}
           defaultHoursPerDay={defaultHoursPerDay}
           allowAddCategory={allowAddActivityCategory}
+          showWorkingPatternWarning={isClinician && !isManager}
+          profileWorkingDays={profile?.working_days}
+          additionalWorkDates={additionalWorkDatesForForm}
         />
         <RecentLogs
           logs={recentLogs}

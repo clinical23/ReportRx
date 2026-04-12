@@ -42,6 +42,7 @@ export type AdminTeamMember = {
   email: string | null
   role: 'clinician' | 'manager' | 'admin' | 'superadmin'
   is_active: boolean | null
+  working_days: number[] | null
 }
 
 export async function listOrganisations(profile: Profile): Promise<AdminOrganisation[]> {
@@ -106,9 +107,65 @@ export async function listTeamMembers(organisationId: string): Promise<AdminTeam
   const supabase = await createServerClient()
   const { data } = await supabase
     .from('profiles')
-    .select('id, full_name, email, role, is_active')
+    .select('id, full_name, email, role, is_active, working_days')
     .eq('organisation_id', organisationId)
     .order('full_name', { ascending: true })
 
   return (data ?? []) as AdminTeamMember[]
+}
+
+export type OrgAdditionalWorkingDayRow = {
+  id: string
+  clinician_id: string
+  work_date: string
+  reason: string | null
+  approved_by: string
+  created_at: string
+  clinician_full_name: string | null
+  approver_full_name: string | null
+}
+
+export async function listOrgAdditionalWorkingDays(
+  organisationId: string,
+): Promise<OrgAdditionalWorkingDayRow[]> {
+  const supabase = await createServerClient()
+  const { data, error } = await supabase
+    .from('additional_working_days')
+    .select('id, clinician_id, work_date, reason, approved_by, created_at')
+    .eq('organisation_id', organisationId)
+    .order('work_date', { ascending: false })
+
+  if (error) {
+    console.error('[listOrgAdditionalWorkingDays]', error.message)
+    return []
+  }
+
+  const rows = data ?? []
+  const idSet = new Set<string>()
+  for (const r of rows) {
+    idSet.add(String(r.clinician_id))
+    idSet.add(String(r.approved_by))
+  }
+  const ids = [...idSet]
+  if (ids.length === 0) return []
+
+  const { data: profs } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .in('id', ids)
+
+  const nameBy = new Map(
+    (profs ?? []).map((p) => [String(p.id), (p.full_name as string | null)?.trim() || null]),
+  )
+
+  return rows.map((r) => ({
+    id: String(r.id),
+    clinician_id: String(r.clinician_id),
+    work_date: String(r.work_date).slice(0, 10),
+    reason: r.reason == null ? null : String(r.reason),
+    approved_by: String(r.approved_by),
+    created_at: String(r.created_at),
+    clinician_full_name: nameBy.get(String(r.clinician_id)) ?? null,
+    approver_full_name: nameBy.get(String(r.approved_by)) ?? null,
+  }))
 }

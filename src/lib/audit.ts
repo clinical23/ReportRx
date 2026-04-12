@@ -23,7 +23,8 @@ export type AuditResourceType =
   | "auth"
   | "practice_assignment"
   | "bulk_invite"
-  | "dsar";
+  | "dsar"
+  | "additional_working_day";
 
 /**
  * Browser-only audit insert (uses anon client + session). Fire-and-forget from UI: `void logAudit(...)`.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import type { ActivityCategory } from "@/lib/supabase/activity";
 import type { ClinicianListItem } from "@/lib/supabase/data";
 import { todayISOInLondon } from "@/lib/datetime";
+import { isDateExpectedForClinician } from "@/lib/working-pattern";
 import { cn } from "@/lib/utils";
 import { Copy } from "lucide-react";
 
@@ -36,6 +37,10 @@ type Props = {
   defaultHoursPerDay?: number;
   /** Only admins may add categories from the activity form */
   allowAddCategory?: boolean;
+  /** Clinician-only: warn when date is outside pattern and not an approved extra day */
+  showWorkingPatternWarning?: boolean;
+  profileWorkingDays?: unknown;
+  additionalWorkDates?: string[];
 };
 
 type CountMap = Record<string, number>;
@@ -126,6 +131,9 @@ export default function ActivityLogForm({
   defaultPracticeId,
   defaultHoursPerDay = 7.5,
   allowAddCategory = false,
+  showWorkingPatternWarning = false,
+  profileWorkingDays,
+  additionalWorkDates = [],
 }: Props) {
   const scopedPractices =
     variant === "clinician" &&
@@ -176,6 +184,20 @@ export default function ActivityLogForm({
   const canSaveSingle =
     !clinicianLocked ||
     (clinicianRecordId != null && clinicianRecordId !== "");
+
+  const additionalDateSet = useMemo(
+    () => new Set((additionalWorkDates ?? []).map((d) => d.slice(0, 10))),
+    [additionalWorkDates],
+  );
+
+  const outsideWorkingPattern =
+    showWorkingPatternWarning &&
+    Boolean(logDate) &&
+    !isDateExpectedForClinician(
+      logDate,
+      profileWorkingDays,
+      additionalDateSet,
+    );
 
   function handleCount(
     map: CountMap,
@@ -449,6 +471,21 @@ export default function ActivityLogForm({
                 />
               </div>
             </div>
+
+            {outsideWorkingPattern ? (
+              <div
+                className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm"
+                role="status"
+              >
+                <p className="font-medium text-amber-950">
+                  This date is outside your working pattern.
+                </p>
+                <p className="mt-1 text-amber-900/90">
+                  Contact your admin to approve additional days if you worked on
+                  this date.
+                </p>
+              </div>
+            ) : null}
 
             <p className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-500">
               Appointment categories

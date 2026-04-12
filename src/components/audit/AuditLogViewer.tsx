@@ -35,6 +35,7 @@ const RESOURCE_FILTER_OPTIONS: Array<{ value: AuditResourceType | ""; label: str
   { value: "practice_assignment", label: "Practice assignment" },
   { value: "bulk_invite", label: "Bulk invite" },
   { value: "dsar", label: "DSAR" },
+  { value: "additional_working_day", label: "Additional working day" },
 ];
 
 type AuditRow = {

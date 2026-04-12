@@ -44,21 +44,41 @@ function shortDate(isoDate: string) {
 }
 
 export default function MyWeekStrip({ days }: { days: MyWeekStatusItem[] }) {
+  const n = days.length
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-900">My Week</h2>
-        <p className="text-xs text-gray-500">Mon - Fri status</p>
+        <p className="text-xs text-gray-500">
+          Your scheduled days this week
+        </p>
       </div>
-      <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+      <div
+        className="grid gap-1.5 sm:gap-2"
+        style={{
+          gridTemplateColumns: `repeat(${Math.max(n, 1)}, minmax(0, 1fr))`,
+        }}
+      >
         {days.map((day) => (
           <div
             key={day.date}
-            className={`rounded-lg border px-1.5 py-2 text-center sm:px-2 ${cardClass(day)}`}
+            className={`rounded-lg border px-1.5 py-2 text-center sm:px-2 ${
+              day.isAdditionalDay
+                ? "ring-2 ring-teal-300/80 ring-offset-1 ring-offset-white "
+                : ""
+            } ${cardClass(day)}`}
           >
             <div className="flex items-center justify-center gap-1 text-[11px] font-semibold">
               <span className="sm:hidden">{day.dayName[0]}</span>
               <span className="hidden sm:inline">{day.dayName}</span>
+              {day.isAdditionalDay ? (
+                <span
+                  className="rounded bg-teal-600 px-1 py-px text-[9px] font-bold leading-none text-white"
+                  title="Approved extra day"
+                >
+                  +
+                </span>
+              ) : null}
               <StatusIcon day={day} />
             </div>
             <p className="mt-0.5 text-[11px] sm:text-xs">{shortDate(day.date)}</p>
