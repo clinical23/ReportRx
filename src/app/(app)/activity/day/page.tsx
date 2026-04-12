@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { formatDateLongUK } from "@/lib/datetime";
 import { getDailyBreakdown } from "@/lib/supabase/activity";
+import { activityClinicianKeys } from "@/lib/supabase/clinician-scope";
 import { getAuthProfile, isAppRole } from "@/lib/supabase/auth-profile";
 import { getPracticeScopeIdsForSession } from "@/lib/supabase/practice-scope";
 import { cn } from "@/lib/utils";
@@ -44,10 +45,10 @@ export default async function DailyBreakdownPage({ searchParams }: Props) {
 
   const scope = await getPracticeScopeIdsForSession(session);
 
-  // Clinicians see only their own entries
-  const clinicianId = isClinician ? profile?.clinician_id ?? null : null;
+  const clinicianKeys =
+    isClinician && profile ? activityClinicianKeys(profile) : null;
 
-  const rows = await getDailyBreakdown(date, scope, clinicianId);
+  const rows = await getDailyBreakdown(date, scope, clinicianKeys);
 
   // Aggregate stats
   const totalAppointments = rows.reduce((s, r) => s + r.appointment_count, 0);

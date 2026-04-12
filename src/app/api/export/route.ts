@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { activityClinicianKeys } from "@/lib/supabase/clinician-scope";
 import {
   resolveReportingPracticeScope,
   type ReportingPracticeOption,
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
 
   const { data: profileRow } = await supabase
     .from("profiles")
-    .select("organisation_id")
+    .select("organisation_id, role, clinician_id")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -78,6 +79,32 @@ export async function GET(request: Request) {
 
   if (practiceScope != null && practiceScope.length > 0) {
     query = query.in("practice_id", practiceScope);
+  }
+
+  if (profileRow?.role === "clinician") {
+    const keys = activityClinicianKeys({
+      id: user.id,
+      clinician_id: (profileRow.clinician_id as string | null) ?? null,
+    });
+    if (keys.length === 0) {
+      const headers = [
+        "Date",
+        "Clinician",
+        "Practice",
+        "PCN",
+        "Category",
+        "Appointments",
+        "Hours",
+      ];
+      const csv = [headers.map(csvCell).join(",")].join("\n");
+      return new NextResponse(csv, {
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="reportrx-export-${startDate}-to-${endDate}.csv"`,
+        },
+      });
+    }
+    query = query.in("clinician_id", keys);
   }
 
   const { data, error } = await query;

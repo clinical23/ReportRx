@@ -11,6 +11,7 @@ import {
   getMyWeekStatus,
   listRecentLogsGrouped,
 } from "@/lib/supabase/activity";
+import { activityClinicianKeys } from "@/lib/supabase/clinician-scope";
 import {
   getOrganisationSettingsRecord,
   parseDefaultHoursPerDay,
@@ -69,12 +70,15 @@ export default async function ActivityPage() {
           })
         : listPractices()
 
+    const recentClinicianKeys =
+      isClinician && profile ? activityClinicianKeys(profile) : null
+
     const [clinicians, practices, categories, recentLogs, weekStatus, orgRecord] =
       await Promise.all([
         listClinicians(),
         practicesPromise,
         listActivityCategories(),
-        listRecentLogsGrouped(10, scope),
+        listRecentLogsGrouped(10, scope, recentClinicianKeys),
         profileOrgId && profile?.id ? getMyWeekStatus(profile.id, profileOrgId) : Promise.resolve([]),
         orgRecordPromise,
       ])

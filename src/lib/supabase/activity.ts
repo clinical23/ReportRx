@@ -248,14 +248,20 @@ export async function listRecentLogs(
 export async function listRecentLogsGrouped(
   limit = 10,
   practiceScopeIds: string[],
+  clinicianKeys?: string[] | null,
 ) {
   if (practiceScopeIds.length === 0) return []
+  if (clinicianKeys != null && clinicianKeys.length === 0) return []
 
   const supabase = await createClient()
-  const { data: logs, error: logsError } = await supabase
+  let logsQuery = supabase
     .from('activity_logs')
     .select('id, log_date, hours_worked, clinician_id, practice_id, submitted_by, created_at')
     .in('practice_id', practiceScopeIds)
+  if (clinicianKeys != null && clinicianKeys.length > 0) {
+    logsQuery = logsQuery.in('clinician_id', clinicianKeys)
+  }
+  const { data: logs, error: logsError } = await logsQuery
     .order('log_date', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(limit)
@@ -563,14 +569,15 @@ export type DailyBreakdownEntry = {
 
 /**
  * All activity_report rows for a single date, scoped to visible practices.
- * For clinicians the caller can optionally pass clinicianId to restrict further.
+ * For clinicians pass their profile id(s) via clinicianKeys (see activityClinicianKeys).
  */
 export async function getDailyBreakdown(
   date: string,
   practiceScopeIds: string[],
-  clinicianId?: string | null,
+  clinicianKeys?: string[] | null,
 ): Promise<DailyBreakdownEntry[]> {
   if (practiceScopeIds.length === 0) return [];
+  if (clinicianKeys != null && clinicianKeys.length === 0) return [];
 
   const supabase = await createClient();
   let query = supabase
@@ -579,8 +586,8 @@ export async function getDailyBreakdown(
     .eq("log_date", date)
     .in("practice_id", practiceScopeIds);
 
-  if (clinicianId) {
-    query = query.eq("clinician_id", clinicianId);
+  if (clinicianKeys != null && clinicianKeys.length > 0) {
+    query = query.in("clinician_id", clinicianKeys);
   }
 
   const { data, error } = await query;

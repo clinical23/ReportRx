@@ -36,6 +36,8 @@ type Props = {
   practices: ReportingPracticeOption[]
   selectedPcnId: string | null
   selectedPracticeId: string | null
+  /** Personal reporting: hide org-wide copy and clinician comparison table. */
+  isClinicianView?: boolean
   summary: ReportingSummary
   byCategory: CategoryBreakdownItem[]
   byPractice: PracticeBreakdownItem[]
@@ -246,6 +248,7 @@ export function ReportingDashboardClient({
   practices,
   selectedPcnId,
   selectedPracticeId,
+  isClinicianView = false,
   summary,
   byCategory,
   byPractice,
@@ -288,7 +291,9 @@ export function ReportingDashboardClient({
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">Reporting</h1>
         <p className="text-sm text-gray-500">
-          Analyse activity data across your organisation with filters, charts and exports.
+          {isClinicianView
+            ? 'Your activity data with filters, charts and exports.'
+            : 'Analyse activity data across your organisation with filters, charts and exports.'}
         </p>
       </div>
 
@@ -342,7 +347,9 @@ export function ReportingDashboardClient({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+      <div
+        className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isClinicianView ? 'md:grid-cols-3' : 'md:grid-cols-4'}`}
+      >
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
           <p className="text-sm text-gray-500">Total appointments</p>
           <p className="mt-1 text-3xl font-bold text-teal-600">{summary.totalAppointments.toLocaleString()}</p>
@@ -351,10 +358,12 @@ export function ReportingDashboardClient({
           <p className="text-sm text-gray-500">Hours logged</p>
           <p className="mt-1 text-3xl font-bold text-teal-600">{summary.totalHours.toLocaleString()}</p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
-          <p className="text-sm text-gray-500">Active clinicians</p>
-          <p className="mt-1 text-3xl font-bold text-teal-600">{summary.activeClinicians.toLocaleString()}</p>
-        </div>
+        {isClinicianView ? null : (
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
+            <p className="text-sm text-gray-500">Active clinicians</p>
+            <p className="mt-1 text-3xl font-bold text-teal-600">{summary.activeClinicians.toLocaleString()}</p>
+          </div>
+        )}
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
           <p className="text-sm text-gray-500">Avg per day</p>
           <p className="mt-1 text-3xl font-bold text-teal-600">{summary.avgAppointmentsPerDay.toLocaleString()}</p>
@@ -549,44 +558,46 @@ export function ReportingDashboardClient({
         )}
       </div>
 
-      <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
-        <h2 className="mb-3 text-sm font-semibold text-gray-900">Clinician breakdown</h2>
-        <div className="-mx-1 overflow-x-auto px-1 md:mx-0 md:px-0">
-          <table className="w-full min-w-[36rem] text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50 text-left text-sm font-medium text-gray-500">
-                <th className="px-3 py-2">Clinician</th>
-                <th className="px-3 py-2">Appointments</th>
-                <th className="px-3 py-2">Hours</th>
-                <th className="px-3 py-2">Practices</th>
-                <th className="px-3 py-2">Logs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clinicianBreakdown.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
-                    No clinician data for this period.
-                  </td>
+      {isClinicianView ? null : (
+        <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
+          <h2 className="mb-3 text-sm font-semibold text-gray-900">Clinician breakdown</h2>
+          <div className="-mx-1 overflow-x-auto px-1 md:mx-0 md:px-0">
+            <table className="w-full min-w-[36rem] text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50 text-left text-sm font-medium text-gray-500">
+                  <th className="px-3 py-2">Clinician</th>
+                  <th className="px-3 py-2">Appointments</th>
+                  <th className="px-3 py-2">Hours</th>
+                  <th className="px-3 py-2">Practices</th>
+                  <th className="px-3 py-2">Logs</th>
                 </tr>
-              ) : (
-                clinicianBreakdown.map((row, idx) => (
-                  <tr
-                    key={`${row.clinician_name}-${idx}`}
-                    className="border-b border-gray-100 hover:bg-gray-50"
-                  >
-                    <td className="px-3 py-2">{row.clinician_name}</td>
-                    <td className="px-3 py-2">{row.total_appointments}</td>
-                    <td className="px-3 py-2">{row.total_hours}</td>
-                    <td className="px-3 py-2">{row.practices_covered}</td>
-                    <td className="px-3 py-2">{row.log_count}</td>
+              </thead>
+              <tbody>
+                {clinicianBreakdown.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
+                      No clinician data for this period.
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  clinicianBreakdown.map((row, idx) => (
+                    <tr
+                      key={`${row.clinician_name}-${idx}`}
+                      className="border-b border-gray-100 hover:bg-gray-50"
+                    >
+                      <td className="px-3 py-2">{row.clinician_name}</td>
+                      <td className="px-3 py-2">{row.total_appointments}</td>
+                      <td className="px-3 py-2">{row.total_hours}</td>
+                      <td className="px-3 py-2">{row.practices_covered}</td>
+                      <td className="px-3 py-2">{row.log_count}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h2 className="mb-3 text-sm font-semibold text-gray-900">Recent activity</h2>

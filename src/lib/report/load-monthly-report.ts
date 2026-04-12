@@ -1,4 +1,5 @@
 import { getProfile } from "@/lib/supabase/auth";
+import { activityClinicianKeys } from "@/lib/supabase/clinician-scope";
 import {
   getAppointmentsByCategory,
   getAppointmentsByPractice,
@@ -45,6 +46,9 @@ export async function loadMonthlyReportViewProps(sp: {
     sp.practice?.trim(),
   );
 
+  const clinicianKeys =
+    profile.role === "clinician" ? activityClinicianKeys(profile) : null;
+
   const generatedAt = new Date();
   const generatedAtLabel = generatedAt.toLocaleString("en-GB", {
     dateStyle: "medium",
@@ -56,10 +60,10 @@ export async function loadMonthlyReportViewProps(sp: {
   const [orgName, summary, byCategory, byPractice, clinicianBreakdown] =
     await Promise.all([
       getOrganisationName(profile.organisation_id),
-      getReportingSummary(safeStart, safeEnd, practiceScope),
-      getAppointmentsByCategory(safeStart, safeEnd, practiceScope),
-      getAppointmentsByPractice(safeStart, safeEnd, practiceScope),
-      getClinicianBreakdown(safeStart, safeEnd, practiceScope),
+      getReportingSummary(safeStart, safeEnd, practiceScope, clinicianKeys),
+      getAppointmentsByCategory(safeStart, safeEnd, practiceScope, clinicianKeys),
+      getAppointmentsByPractice(safeStart, safeEnd, practiceScope, clinicianKeys),
+      getClinicianBreakdown(safeStart, safeEnd, practiceScope, clinicianKeys),
     ]);
 
   const organisationName = orgName ?? "Organisation";

@@ -1,4 +1,5 @@
 import { getProfile } from '@/lib/supabase/auth'
+import { activityClinicianKeys } from '@/lib/supabase/clinician-scope'
 import {
   listReportingPcns,
   listReportingPractices,
@@ -49,6 +50,9 @@ export default async function ReportingPage({
     practiceParam,
   )
 
+  const clinicianKeys =
+    profile.role === 'clinician' ? activityClinicianKeys(profile) : null
+
   const {
     summary,
     byCategory,
@@ -57,7 +61,12 @@ export default async function ReportingPage({
     clinicianBreakdown,
     recentLogs,
     dataCompleteness,
-  } = await loadReportingDashboardData(safeStart, safeEnd, practiceScope)
+  } = await loadReportingDashboardData(
+    safeStart,
+    safeEnd,
+    practiceScope,
+    clinicianKeys,
+  )
 
   return (
     <ReportingDashboardClient
@@ -67,6 +76,7 @@ export default async function ReportingPage({
       practices={practices}
       selectedPcnId={pcnParam ?? null}
       selectedPracticeId={practiceParam ?? null}
+      isClinicianView={profile.role === 'clinician'}
       summary={summary}
       byCategory={byCategory}
       byPractice={byPractice}

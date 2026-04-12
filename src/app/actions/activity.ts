@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { todayISOInLondon } from '@/lib/datetime'
 import { getProfile } from '@/lib/supabase/auth'
 import { getAssignedPracticeIdsForProfileWithClient } from '@/lib/supabase/clinician-practice-assignments'
 import { createClient } from '@/lib/supabase/server'
@@ -152,11 +153,7 @@ export async function getPreviousDayLog(
     }
   }
 
-  const today = new Date()
-  const yyyy = today.getFullYear()
-  const mm = String(today.getMonth() + 1).padStart(2, '0')
-  const dd = String(today.getDate()).padStart(2, '0')
-  const todayIso = `${yyyy}-${mm}-${dd}`
+  const todayIso = todayISOInLondon()
 
   const { data: priorLog, error: logError } = await supabase
     .from('activity_logs')

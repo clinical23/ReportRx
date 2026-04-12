@@ -27,6 +27,7 @@ import {
 } from "@/lib/datetime";
 import { getDashboardSnapshot } from "@/lib/supabase/activity";
 import { getProfile } from "@/lib/supabase/auth";
+import { activityClinicianKeys } from "@/lib/supabase/clinician-scope";
 import { getAuthProfile } from "@/lib/supabase/auth-profile";
 import { getPracticeScopeIdsForSession } from "@/lib/supabase/practice-scope";
 import {
@@ -111,17 +112,6 @@ function StatTile({
   return content;
 }
 
-function myClinicianKeys(profile: {
-  id: string;
-  clinician_id: string | null;
-}): string[] {
-  return [
-    ...new Set(
-      [profile.id, profile.clinician_id].filter((x): x is string => Boolean(x)),
-    ),
-  ];
-}
-
 export default async function DashboardPage() {
   const profile = await getProfile();
 
@@ -133,7 +123,7 @@ export default async function DashboardPage() {
   if (profile.role === "clinician") {
     const { from, to } = londonMonthRangeISO();
     const monthLabel = formatMonthLabelUK(from.slice(0, 7));
-    const keys = myClinicianKeys(profile);
+    const keys = activityClinicianKeys(profile);
 
     const [myStats, myCategories, myRecent] = await Promise.all([
       getMyStats(keys, from, to),

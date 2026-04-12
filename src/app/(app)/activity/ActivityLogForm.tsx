@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   bulkSaveActivityLogs,
@@ -166,6 +167,7 @@ export default function ActivityLogForm({
   } | null>(null);
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
+  const router = useRouter();
 
   const clinicianLocked = variant === "clinician";
   const canSaveSingle =
@@ -200,7 +202,7 @@ export default function ActivityLogForm({
       const cid = clinicianLocked ? (clinicianRecordId ?? "") : clinicianId;
       if (!cid) {
         const text =
-          "Your account is not linked to a clinician record (profiles.clinician_id). Contact an administrator.";
+          "Your profile id is missing. Sign out and back in, or contact an administrator.";
         setMessage({
           type: "error",
           text,
@@ -228,6 +230,7 @@ export default function ActivityLogForm({
           practice_id: practiceId,
         });
         setCounts({});
+        router.refresh();
       } else {
         setMessage({ type: "error", text: result.error });
         toast.error(result.error);
@@ -259,6 +262,7 @@ export default function ActivityLogForm({
         });
         setBulkCounts({});
         setBulkClinicianIds([]);
+        router.refresh();
       } else {
         setMessage({ type: "error", text: result.error });
         toast.error(result.error);

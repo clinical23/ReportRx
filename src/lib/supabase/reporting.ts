@@ -227,10 +227,11 @@ export async function getDataCompleteness(
   startDate: string,
   endDate: string,
   practiceScope?: ReportingPracticeScope,
+  clinicianKeys?: ReportingClinicianScope,
 ): Promise<DataCompletenessRow[]> {
   await getProfile()
   const expected = countWeekdaysInclusive(startDate, endDate)
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope, clinicianKeys)
   return dataCompletenessFromRows(rows, startDate, endDate, expected)
 }
 
@@ -397,12 +398,19 @@ export async function getMyRecentLogs(
 const REPORT_SELECT =
   'log_id, log_date, hours_worked, clinician_id, clinician_name, practice_name, category_name, appointment_count, practice_id'
 
+/** When non-empty, restrict rows to these activity_report.clinician_id values. */
+export type ReportingClinicianScope = string[] | null
+
 async function fetchRowsForRange(
   startDate: string,
   endDate: string,
   practiceScope?: ReportingPracticeScope,
+  clinicianKeys?: ReportingClinicianScope,
 ): Promise<ActivityReportRow[]> {
   if (practiceScope !== null && practiceScope !== undefined && practiceScope.length === 0) {
+    return []
+  }
+  if (clinicianKeys != null && clinicianKeys.length === 0) {
     return []
   }
   const supabase = await createClient()
@@ -414,6 +422,10 @@ async function fetchRowsForRange(
 
   if (practiceScope != null && practiceScope.length > 0) {
     q = q.in('practice_id', practiceScope)
+  }
+
+  if (clinicianKeys != null && clinicianKeys.length > 0) {
+    q = q.in('clinician_id', clinicianKeys)
   }
 
   const { data, error } = await q
@@ -608,6 +620,7 @@ export async function loadReportingDashboardData(
   startDate: string,
   endDate: string,
   practiceScope?: ReportingPracticeScope,
+  clinicianKeys?: ReportingClinicianScope,
 ): Promise<{
   summary: ReportingSummary
   byCategory: CategoryBreakdownItem[]
@@ -618,7 +631,7 @@ export async function loadReportingDashboardData(
   dataCompleteness: DataCompletenessRow[]
 }> {
   await getProfile()
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope, clinicianKeys)
   const expected = countWeekdaysInclusive(startDate, endDate)
   return {
     summary: reportingSummaryFromRows(rows),
@@ -635,8 +648,9 @@ export async function getReportingSummary(
   startDate: string,
   endDate: string,
   practiceScope?: ReportingPracticeScope,
+  clinicianKeys?: ReportingClinicianScope,
 ): Promise<ReportingSummary> {
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope, clinicianKeys)
   return reportingSummaryFromRows(rows)
 }
 
@@ -644,8 +658,9 @@ export async function getAppointmentsByCategory(
   startDate: string,
   endDate: string,
   practiceScope?: ReportingPracticeScope,
+  clinicianKeys?: ReportingClinicianScope,
 ): Promise<CategoryBreakdownItem[]> {
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope, clinicianKeys)
   return appointmentsByCategoryFromRows(rows)
 }
 
@@ -653,8 +668,9 @@ export async function getAppointmentsByPractice(
   startDate: string,
   endDate: string,
   practiceScope?: ReportingPracticeScope,
+  clinicianKeys?: ReportingClinicianScope,
 ): Promise<PracticeBreakdownItem[]> {
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope, clinicianKeys)
   return appointmentsByPracticeFromRows(rows)
 }
 
@@ -662,8 +678,9 @@ export async function getDailyTrend(
   startDate: string,
   endDate: string,
   practiceScope?: ReportingPracticeScope,
+  clinicianKeys?: ReportingClinicianScope,
 ): Promise<DailyTrendItem[]> {
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope, clinicianKeys)
   return dailyTrendFromRows(rows)
 }
 
@@ -671,8 +688,9 @@ export async function getClinicianBreakdown(
   startDate: string,
   endDate: string,
   practiceScope?: ReportingPracticeScope,
+  clinicianKeys?: ReportingClinicianScope,
 ): Promise<ClinicianBreakdownItem[]> {
-  const rows = await fetchRowsForRange(startDate, endDate, practiceScope)
+  const rows = await fetchRowsForRange(startDate, endDate, practiceScope, clinicianKeys)
   return clinicianBreakdownFromRows(rows)
 }
 
@@ -682,10 +700,15 @@ export async function getRecentLogs(
     practiceScope?: ReportingPracticeScope
     startDate?: string
     endDate?: string
+    clinicianKeys?: ReportingClinicianScope
   },
 ): Promise<RecentLogItem[]> {
   const scope = options?.practiceScope
   if (scope !== null && scope !== undefined && scope.length === 0) {
+    return []
+  }
+  const ck = options?.clinicianKeys
+  if (ck != null && ck.length === 0) {
     return []
   }
 
@@ -701,6 +724,9 @@ export async function getRecentLogs(
   }
   if (scope != null && scope.length > 0) {
     q = q.in('practice_id', scope)
+  }
+  if (ck != null && ck.length > 0) {
+    q = q.in('clinician_id', ck)
   }
 
   const { data, error } = await q
