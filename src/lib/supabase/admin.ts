@@ -26,6 +26,7 @@ export type AdminPCN = {
   id: string
   name: string
   organisation_id: string | null
+  is_active: boolean | null
 }
 
 export type AdminPractice = {
@@ -34,13 +35,14 @@ export type AdminPractice = {
   organisation_id: string | null
   pcn_id: string | null
   pcn_name: string | null
+  is_active: boolean | null
 }
 
 export type AdminTeamMember = {
   id: string
   full_name: string | null
   email: string | null
-  role: 'clinician' | 'manager' | 'admin' | 'superadmin'
+  role: string
   is_active: boolean | null
   working_days: number[] | null
 }
@@ -66,7 +68,7 @@ export async function listPCNs(organisationId: string): Promise<AdminPCN[]> {
   const supabase = await createServerClient()
   const { data } = await supabase
     .from('pcns')
-    .select('id, name, organisation_id')
+    .select('id, name, organisation_id, is_active')
     .eq('organisation_id', organisationId)
     .order('name', { ascending: true })
 
@@ -78,7 +80,7 @@ export async function listPractices(organisationId: string): Promise<AdminPracti
   const [{ data: practices }, { data: pcns }] = await Promise.all([
     supabase
       .from('practices')
-      .select('id, name, organisation_id, pcn_id')
+      .select('id, name, organisation_id, pcn_id, is_active')
       .eq('organisation_id', organisationId)
       .order('name', { ascending: true }),
     supabase
@@ -94,12 +96,14 @@ export async function listPractices(organisationId: string): Promise<AdminPracti
     name: string
     organisation_id: string | null
     pcn_id: string | null
+    is_active: boolean | null
   }>).map((row) => ({
     id: row.id,
     name: row.name,
     organisation_id: row.organisation_id,
     pcn_id: row.pcn_id,
     pcn_name: row.pcn_id ? (pcnNameById.get(row.pcn_id) ?? null) : null,
+    is_active: row.is_active ?? true,
   }))
 }
 

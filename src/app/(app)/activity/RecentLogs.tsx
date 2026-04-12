@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast-provider";
 
-import { editActivityLog } from '@/app/actions/activity'
+import { deleteActivityLog, editActivityLog } from '@/app/actions/activity'
 import { logAudit } from '@/lib/audit'
 import {
   Card,
@@ -15,6 +15,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { formatDateMediumUK, formatRelativeDayLabelUK } from '@/lib/datetime'
 import type { AppRole } from '@/lib/supabase/auth-profile'
 import type { ActivityCategory } from '@/lib/supabase/activity'
@@ -61,6 +69,10 @@ function canEditLog(log: GroupedRecentLog, userId: string, role: AppRole | null)
   )
 }
 
+function canDeleteLog(_log: GroupedRecentLog, role: AppRole | null) {
+  return role === 'admin' || role === 'superadmin'
+}
+
 export default function RecentLogs({
   logs,
   categories,
@@ -74,6 +86,7 @@ export default function RecentLogs({
   const [reason, setReason] = useState('')
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [pendingDeleteLog, setPendingDeleteLog] = useState<GroupedRecentLog | null>(null)
   const [isPending, startTransition] = useTransition()
   const toast = useToast()
 
@@ -143,13 +156,39 @@ export default function RecentLogs({
         toast.error(result.error)
         return
       }
-      void logAudit('edit', 'activity_log', activeEditLog.log_id, {
-        date: activeEditLog.log_date.slice(0, 10),
-        practice_id: activeEditLog.practice_id,
-      })
+      try {
+        await logAudit('edit', 'activity_log', activeEditLog.log_id, {
+          date: activeEditLog.log_date.slice(0, 10),
+          practice_id: activeEditLog.practice_id,
+        })
+      } catch {
+        console.warn('[RecentLogs] logAudit(edit) failed')
+      }
       setMessage({ type: 'success', text: 'Log updated successfully' })
       toast.success('Log updated successfully')
       setEditingLogId(null)
+      router.refresh()
+    })
+  }
+
+  const confirmDelete = () => {
+    if (!pendingDeleteLog) return
+    startTransition(async () => {
+      const r = await deleteActivityLog(pendingDeleteLog.log_id)
+      if (!r.success) {
+        toast.error(r.error)
+        return
+      }
+      try {
+        await logAudit('delete', 'activity_log', pendingDeleteLog.log_id, {
+          date: pendingDeleteLog.log_date.slice(0, 10),
+          practice_id: pendingDeleteLog.practice_id,
+        })
+      } catch {
+        console.warn('[RecentLogs] logAudit(delete) failed')
+      }
+      toast.success('Activity log deleted.')
+      setPendingDeleteLog(null)
       router.refresh()
     })
   }
@@ -215,6 +254,7 @@ export default function RecentLogs({
                     .join(' · ')
                 : 'Uncategorised'
             const editable = canEditLog(log, currentUserId, currentUserRole)
+            const deletable = canDeleteLog(log, currentUserRole)
 
             return (
               <li
@@ -263,6 +303,16 @@ export default function RecentLogs({
                       className="inline-flex rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700"
                     >
                       Edit
+                    </button>
+                  ) : null}
+                  {deletable ? (
+                    <button
+                      type="button"
+                      onClick={() => setPendingDeleteLog(log)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-800 hover:bg-red-100"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                      Delete
                     </button>
                   ) : null}
                 </div>
@@ -379,6 +429,44 @@ export default function RecentLogs({
           </div>
         </div>
       ) : null}
+
+      <Dialog
+        open={pendingDeleteLog != null}
+        onOpenChange={(open) => !open && setPendingDeleteLog(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete activity log?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            Are you sure you want to delete this activity log? This action cannot be
+            undone.
+          </p>
+          {pendingDeleteLog ? (
+            <p className="text-sm text-gray-500">
+              {pendingDeleteLog.clinician_name} ·{' '}
+              {formatDateMediumUK(pendingDeleteLog.log_date)}
+            </p>
+          ) : null}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPendingDeleteLog(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isPending}
+              onClick={confirmDelete}
+            >
+              {isPending ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

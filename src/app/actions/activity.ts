@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { logAuditWithServerSupabase } from '@/lib/audit'
 import { todayISOInLondon } from '@/lib/datetime'
 import { getProfile } from '@/lib/supabase/auth'
 import { getAssignedPracticeIdsForProfileWithClient } from '@/lib/supabase/clinician-practice-assignments'
@@ -350,8 +351,7 @@ export async function editActivityLog(
       .from('activity_log_edits')
       .insert(auditRows)
     if (auditError) {
-      console.error('[editActivityLog] audit insert failed:', auditError.message)
-      return { success: false, error: 'Saved changes but failed to write audit trail.' }
+      console.warn('[editActivityLog] activity_log_edits insert failed:', auditError.message)
     }
   }
 
@@ -468,6 +468,48 @@ export async function bulkSaveActivityLogs(
   revalidatePath('/')
   revalidatePath('/reporting')
   return { success: true, count: clinicianIds.length }
+}
+
+export async function deleteActivityLog(
+  logId: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  const profile = await getProfile()
+  if (profile.role !== 'admin' && profile.role !== 'superadmin') {
+    return { success: false, error: 'Only administrators can delete activity logs.' }
+  }
+
+  const trimmed = logId?.trim()
+  if (!trimmed) return { success: false, error: 'Missing log id.' }
+
+  const supabase = await createClient()
+  const { data: logRow, error: logError } = await supabase
+    .from('activity_logs')
+    .select('id, organisation_id, log_date, practice_id')
+    .eq('id', trimmed)
+    .maybeSingle()
+
+  if (logError || !logRow) {
+    return { success: false, error: 'Activity log not found.' }
+  }
+  if (logRow.organisation_id !== profile.organisation_id) {
+    return { success: false, error: 'Unauthorized.' }
+  }
+
+  const { error: delErr } = await supabase.from('activity_logs').delete().eq('id', trimmed)
+  if (delErr) {
+    return { success: false, error: delErr.message || 'Failed to delete log.' }
+  }
+
+  logAuditWithServerSupabase(supabase, 'delete', 'activity_log', trimmed, {
+    date: String(logRow.log_date).slice(0, 10),
+    practice_id: logRow.practice_id,
+  })
+
+  revalidatePath('/activity')
+  revalidatePath('/activity/day')
+  revalidatePath('/')
+  revalidatePath('/reporting')
+  return { success: true }
 }
 
 export async function addActivityCategory(

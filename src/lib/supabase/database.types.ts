@@ -159,16 +159,22 @@ export interface Database {
           id: string;
           name: string;
           created_at: string;
+          organisation_id: string | null;
+          is_active: boolean | null;
         };
         Insert: {
           id?: string;
           name: string;
           created_at?: string;
+          organisation_id?: string | null;
+          is_active?: boolean | null;
         };
         Update: {
           id?: string;
           name?: string;
           created_at?: string;
+          organisation_id?: string | null;
+          is_active?: boolean | null;
         };
         Relationships: [];
       };
@@ -387,16 +393,25 @@ export interface Database {
           id: string;
           name: string;
           pcn_name: string | null;
+          organisation_id: string | null;
+          pcn_id: string | null;
+          is_active: boolean | null;
         };
         Insert: {
           id?: string;
           name: string;
           pcn_name?: string | null;
+          organisation_id?: string | null;
+          pcn_id?: string | null;
+          is_active?: boolean | null;
         };
         Update: {
           id?: string;
           name?: string;
           pcn_name?: string | null;
+          organisation_id?: string | null;
+          pcn_id?: string | null;
+          is_active?: boolean | null;
         };
         Relationships: [];
       };

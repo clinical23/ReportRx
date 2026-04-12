@@ -27,6 +27,7 @@ export async function listReportingPcns(
     .from('pcns')
     .select('id, name')
     .eq('organisation_id', organisationId)
+    .or('is_active.is.null,is_active.eq.true')
     .order('name', { ascending: true })
   if (error) {
     console.error('[listReportingPcns]', error.message)
@@ -44,6 +45,7 @@ export async function listReportingPractices(
     .from('practices')
     .select('id, name, pcn_id')
     .eq('organisation_id', organisationId)
+    .or('is_active.is.null,is_active.eq.true')
     .order('name', { ascending: true })
   if (error) {
     console.error('[listReportingPractices]', error.message)

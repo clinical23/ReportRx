@@ -32,7 +32,11 @@ export default async function CliniciansPage() {
   return (
     <div className="min-w-0">
       <RegisterPageView resource="clinician" />
-      <CliniciansView members={members} />
+      <CliniciansView
+        members={members}
+        viewerRole={profile.role}
+        viewerUserId={profile.id}
+      />
     </div>
   );
 }

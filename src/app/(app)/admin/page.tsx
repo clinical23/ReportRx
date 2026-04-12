@@ -1,13 +1,12 @@
 import {
   changeUserRole,
   createOrganisation,
-  createPCN,
-  createPractice,
   setProfileActive,
 } from '@/app/actions/admin'
 import { AuditLogViewer } from '@/components/audit/AuditLogViewer'
 import { RegisterPageView } from '@/components/audit/register-page-view'
 import { AdminExportUserData } from '@/components/admin/admin-export-user-data'
+import { AdminPcnPracticeSection } from '@/components/admin/admin-pcn-practice-section'
 import { AdminBulkInviteForm } from '@/components/admin/admin-bulk-invite-form'
 import { AdminInviteForm } from '@/components/admin/admin-invite-form'
 import { AdminAdditionalWorkingDays } from '@/components/admin/admin-additional-working-days'
@@ -137,101 +136,11 @@ export default async function AdminPage({
         </section>
       ) : null}
 
-      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">PCNs</h2>
-
-        <div className="mb-6 overflow-x-auto rounded-xl border border-gray-200">
-          <table className="w-full min-w-[16rem] text-sm">
-            <thead className="bg-gray-50">
-              <tr className="text-left text-gray-600">
-                <th className="px-4 py-2.5 font-medium">Name</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pcns.map((pcn) => (
-                <tr key={pcn.id} className="border-t border-gray-100">
-                  <td className="px-4 py-2.5 text-gray-900">{pcn.name}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <form
-          action={createPCN}
-          className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_auto]"
-        >
-          <input type="hidden" name="organisation_id" value={currentOrgId} />
-          <input
-            type="text"
-            name="name"
-            required
-            placeholder="New PCN name"
-            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
-          />
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-teal-600 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-teal-700 md:w-auto md:py-2.5 md:text-sm"
-          >
-            Add PCN
-          </button>
-        </form>
-      </section>
-
-      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Practices</h2>
-
-        <div className="mb-6 overflow-x-auto rounded-xl border border-gray-200">
-          <table className="w-full min-w-[22rem] text-sm">
-            <thead className="bg-gray-50">
-              <tr className="text-left text-gray-600">
-                <th className="px-4 py-2.5 font-medium">Practice</th>
-                <th className="px-4 py-2.5 font-medium">PCN</th>
-              </tr>
-            </thead>
-            <tbody>
-              {practices.map((practice) => (
-                <tr key={practice.id} className="border-t border-gray-100">
-                  <td className="px-4 py-2.5 text-gray-900">{practice.name}</td>
-                  <td className="px-4 py-2.5 text-gray-500">{practice.pcn_name || 'No PCN'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <form
-          action={createPractice}
-          className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]"
-        >
-          <input type="hidden" name="organisation_id" value={currentOrgId} />
-          <input
-            type="text"
-            name="name"
-            required
-            placeholder="New practice name"
-            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
-          />
-          <select
-            name="pcn_id"
-            className="w-full rounded-lg border border-gray-200 px-3 py-3 text-base focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 md:py-2.5 md:text-sm"
-            defaultValue=""
-          >
-            <option value="">No PCN</option>
-            {pcns.map((pcn) => (
-              <option key={pcn.id} value={pcn.id}>
-                {pcn.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-teal-600 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-teal-700 md:w-auto md:py-2.5 md:text-sm"
-          >
-            Add practice
-          </button>
-        </form>
-      </section>
+      <AdminPcnPracticeSection
+        organisationId={currentOrgId}
+        pcns={pcns}
+        practices={practices}
+      />
 
       <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">Team Members</h2>
@@ -255,7 +164,7 @@ export default async function AdminPage({
                   <th className="px-4 py-2.5 font-medium">Status</th>
                   <th className="px-4 py-2.5 font-medium">Access</th>
                   <th className="px-4 py-2.5 font-medium">Update Role</th>
-                  {profile.role === 'superadmin' ? (
+                  {profile.role === 'superadmin' || profile.role === 'admin' ? (
                     <th className="px-4 py-2.5 font-medium w-12"> </th>
                   ) : null}
                 </tr>
@@ -319,24 +228,34 @@ export default async function AdminPage({
                       <select
                         name="role"
                         defaultValue={member.role}
-                        disabled={profile.role !== 'superadmin'}
+                        disabled={
+                          profile.role !== 'superadmin' &&
+                          profile.role !== 'admin'
+                        }
                         className="min-h-11 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-50 disabled:text-gray-400 md:min-h-0 md:w-auto md:px-2 md:py-1.5 md:text-xs"
                       >
                         <option value="clinician">clinician</option>
                         <option value="manager">manager</option>
+                        <option value="practice_manager">practice_manager</option>
+                        <option value="pcn_manager">pcn_manager</option>
                         <option value="admin">admin</option>
-                        <option value="superadmin">superadmin</option>
+                        {profile.role === 'superadmin' ? (
+                          <option value="superadmin">superadmin</option>
+                        ) : null}
                       </select>
                       <button
                         type="submit"
-                        disabled={profile.role !== 'superadmin'}
+                        disabled={
+                          profile.role !== 'superadmin' &&
+                          profile.role !== 'admin'
+                        }
                         className="min-h-11 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 md:min-h-0 md:py-1.5 md:text-xs"
                       >
                         Save
                       </button>
                     </form>
                   </td>
-                  {profile.role === 'superadmin' ? (
+                  {profile.role === 'superadmin' || profile.role === 'admin' ? (
                     <td className="px-4 py-2.5">
                       <AdminExportUserData
                         userId={member.id}
@@ -351,8 +270,13 @@ export default async function AdminPage({
           )}
         </div>
         <div className="mt-3 space-y-1 text-xs text-gray-500">
-          {profile.role !== 'superadmin' ? (
-            <p>Role changes are restricted to superadmins.</p>
+          {profile.role !== 'superadmin' && profile.role !== 'admin' ? (
+            <p>Role changes are restricted to administrators.</p>
+          ) : null}
+          {profile.role === 'admin' ? (
+            <p>
+              Admins can assign roles except superadmin. You cannot edit superadmin users.
+            </p>
           ) : null}
           <p>
             Deactivate removes sign-in access for that user until reactivated. You cannot change

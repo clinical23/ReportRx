@@ -58,12 +58,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (subjectId !== user.id) {
-    if (callerProfile.role !== "superadmin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-  }
-
   const { data: subjectProfile, error: subjectErr } = await admin
     .from("profiles")
     .select(
@@ -77,6 +71,19 @@ export async function GET(request: Request) {
   }
 
   const profile = subjectProfile as ProfileRow;
+
+  if (subjectId !== user.id) {
+    const callerRole = String(callerProfile.role);
+    if (callerRole === "superadmin") {
+      // allowed
+    } else if (callerRole === "admin") {
+      if (profile.organisation_id !== callerProfile.organisation_id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } else {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
 
   if (subjectId === user.id) {
     const since = new Date(Date.now() - HOURS_24_MS).toISOString();

@@ -541,22 +541,34 @@ export function ReportingDashboardClient({
           {byCategory.length === 0 ? (
             <p className="py-12 text-center text-sm text-gray-500">No category data for this period.</p>
           ) : (
-            <div className="h-[300px] md:h-80">
+            <div
+              className="w-full min-w-0"
+              style={{
+                height: Math.max(400, byCategory.length * 36),
+              }}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={byCategory}
                   layout="vertical"
-                  margin={{ left: 16, right: 12, top: 8, bottom: 8 }}
+                  margin={{ top: 5, right: 30, left: 180, bottom: 28 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" label={{ value: 'Appointments', position: 'insideBottom', offset: -4 }} />
+                  <XAxis
+                    type="number"
+                    label={{
+                      value: 'Appointments',
+                      position: 'insideBottom',
+                      offset: -2,
+                    }}
+                  />
                   <YAxis
                     type="category"
                     dataKey="category_name"
-                    width={172}
-                    tick={{ fontSize: 12 }}
+                    width={170}
+                    tick={{ fontSize: 11 }}
                     interval={0}
-                    tickFormatter={(v) => truncateYAxisLabel(v, 32)}
+                    tickFormatter={(v) => truncateYAxisLabel(v, 28)}
                   />
                   <Tooltip content={<CategoryBarTooltip />} cursor={{ fill: 'rgba(13, 148, 136, 0.06)' }} />
                   <Bar dataKey="total_count" fill="#0D9488" radius={[0, 6, 6, 0]} />
@@ -570,22 +582,34 @@ export function ReportingDashboardClient({
           {practiceChartData.length === 0 ? (
             <p className="py-12 text-center text-sm text-gray-500">No practice data for this period.</p>
           ) : (
-            <div className="h-[300px] md:h-80">
+            <div
+              className="w-full min-w-0"
+              style={{
+                height: Math.max(400, practiceChartData.length * 35),
+              }}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={practiceChartData}
                   layout="vertical"
-                  margin={{ left: 16, right: 12, top: 8, bottom: 8 }}
+                  margin={{ top: 5, right: 30, left: 200, bottom: 28 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" label={{ value: 'Appointments', position: 'insideBottom', offset: -4 }} />
+                  <XAxis
+                    type="number"
+                    label={{
+                      value: 'Appointments',
+                      position: 'insideBottom',
+                      offset: -2,
+                    }}
+                  />
                   <YAxis
                     type="category"
                     dataKey="practice_name"
-                    width={168}
-                    tick={{ fontSize: 11 }}
+                    width={190}
+                    tick={{ fontSize: 10 }}
                     interval={0}
-                    tickFormatter={(v) => truncateYAxisLabel(v, 25)}
+                    tickFormatter={(v) => truncateYAxisLabel(v, 30)}
                   />
                   <Tooltip content={<PracticeBarTooltip />} cursor={{ fill: 'rgba(13, 148, 136, 0.06)' }} />
                   <Bar dataKey="total_count" radius={[0, 6, 6, 0]}>

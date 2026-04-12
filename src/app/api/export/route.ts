@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { formatDateUK, UK_TIMEZONE } from "@/lib/datetime";
+import {
+  formatDateUK,
+  londonMonthRangeISO,
+  todayISOInLondon,
+  UK_TIMEZONE,
+} from "@/lib/datetime";
 import { activityClinicianKeys } from "@/lib/supabase/clinician-scope";
 import {
   resolveReportingPracticeScope,
@@ -119,11 +124,16 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const today = new Date();
-  const defaultStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
-  const defaultEnd = today.toISOString().slice(0, 10);
-  const startDate = searchParams.get("start") || defaultStart;
-  const endDate = searchParams.get("end") || defaultEnd;
+  const month = londonMonthRangeISO();
+  const defaultStart = month.from;
+  const defaultEnd = todayISOInLondon();
+  const isoRe = /^\d{4}-\d{2}-\d{2}$/;
+  const rawStart = searchParams.get("start")?.slice(0, 10) || defaultStart;
+  const rawEnd = searchParams.get("end")?.slice(0, 10) || defaultEnd;
+  const startDate = isoRe.test(rawStart) ? rawStart : defaultStart;
+  const endDate = isoRe.test(rawEnd) ? rawEnd : defaultEnd;
+  const startDateSafe = startDate <= endDate ? startDate : endDate;
+  const endDateSafe = startDate <= endDate ? endDate : startDate;
   const pcnParam = searchParams.get("pcn");
   const practiceParam = searchParams.get("practice");
 
@@ -157,8 +167,8 @@ export async function GET(request: Request) {
   let query = supabase
     .from("activity_report")
     .select("*")
-    .gte("log_date", startDate)
-    .lte("log_date", endDate)
+    .gte("log_date", startDateSafe)
+    .lte("log_date", endDateSafe)
     .order("log_date", { ascending: false });
 
   if (practiceScope != null && practiceScope.length > 0) {

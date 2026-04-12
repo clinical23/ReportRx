@@ -58,9 +58,11 @@ export function AdminExportUserData({ userId, memberName }: Props) {
       const fromHeader = parseFilenameFromDisposition(
         res.headers.get("Content-Disposition"),
       );
+      const contentType = res.headers.get("Content-Type") ?? "";
+      const defaultExt = contentType.includes("html") ? "html" : "bin";
       a.download =
         fromHeader ??
-        `reportrx-data-export-${memberName.replace(/\s+/g, "-").toLowerCase()}.json`;
+        `reportrx-data-export-${memberName.replace(/\s+/g, "-").toLowerCase()}.${defaultExt}`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success("Download started.");

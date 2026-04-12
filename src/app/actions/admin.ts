@@ -75,20 +75,30 @@ export async function createPractice(formData: FormData): Promise<void> {
   revalidatePath('/admin')
 }
 
-// Transfer admin — promote a user to admin or superadmin (superadmin only)
+const ASSIGNABLE_ROLES = [
+  'clinician',
+  'manager',
+  'practice_manager',
+  'pcn_manager',
+  'admin',
+  'superadmin',
+] as const
+
+function isAssignableRole(r: string): r is (typeof ASSIGNABLE_ROLES)[number] {
+  return (ASSIGNABLE_ROLES as readonly string[]).includes(r)
+}
+
+// Transfer admin — superadmin: any assignable role; admin: same except cannot assign superadmin or edit superadmin users
 export async function changeUserRole(formData: FormData): Promise<void> {
-  const profile = await requireRole('superadmin')
+  const profile = await requireRole('superadmin', 'admin')
   const supabase = await createClient()
 
-  const userId = formData.get('user_id') as string
+  const userId = (formData.get('user_id') as string)?.trim()
   const newRole = formData.get('role') as string
 
   if (!userId || !newRole) redirectAdminError('User and role are required')
-  if (!['clinician', 'manager', 'admin', 'superadmin'].includes(newRole)) {
-    redirectAdminError('Invalid role')
-  }
+  if (!isAssignableRole(newRole)) redirectAdminError('Invalid role')
 
-  // Verify target user belongs to the same organisation
   const { data: targetUser } = await supabase
     .from('profiles')
     .select('organisation_id, role')
@@ -100,6 +110,11 @@ export async function changeUserRole(formData: FormData): Promise<void> {
   }
 
   const oldRole = String((targetUser as { role?: string }).role ?? '')
+
+  if (profile.role === 'admin') {
+    if (newRole === 'superadmin') redirectAdminError('Only a superadmin can assign that role')
+    if (oldRole === 'superadmin') redirectAdminError('You cannot change a superadmin user')
+  }
 
   const { error } = await supabase
     .from('profiles')
@@ -115,6 +130,137 @@ export async function changeUserRole(formData: FormData): Promise<void> {
   })
 
   revalidatePath('/admin')
+  revalidatePath('/clinicians')
+}
+
+export async function updateTeamMemberDetails(input: {
+  userId: string
+  fullName: string
+  email: string
+}): Promise<{ success: boolean; error?: string }> {
+  const profile = await requireRole('superadmin', 'admin')
+  const supabase = await createClient()
+  const userId = input.userId?.trim()
+  const fullName = input.fullName?.trim()
+  const email = input.email?.trim().toLowerCase()
+
+  if (!userId || !fullName) {
+    return { success: false, error: 'Name is required.' }
+  }
+  if (!email) {
+    return { success: false, error: 'Email is required.' }
+  }
+
+  const { data: target } = await supabase
+    .from('profiles')
+    .select('organisation_id, role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (!target || target.organisation_id !== profile.organisation_id) {
+    return { success: false, error: 'User not found in your organisation.' }
+  }
+
+  if (profile.role === 'admin' && String(target.role) === 'superadmin') {
+    return { success: false, error: 'You cannot edit a superadmin user.' }
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      full_name: fullName,
+      email,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+    .eq('organisation_id', profile.organisation_id)
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/admin')
+      const admin = createAdminClient()
+      const { error: authErr } = await admin.auth.admin.updateUserById(userId, {
+        email,
+        user_metadata: { full_name: fullName },
+      })
+      if (authErr) {
+        console.warn('[updateTeamMemberDetails] auth email sync failed:', authErr.message)
+      }
+    } catch (e) {
+      console.warn('[updateTeamMemberDetails] auth admin client error', e)
+    }
+  }
+
+  logAuditWithServerSupabase(supabase, 'edit', 'clinician', userId, {
+    field: 'profile',
+    full_name: fullName,
+    email,
+  })
+
+  revalidatePath('/admin')
+  revalidatePath('/clinicians')
+  return { success: true }
+}
+
+export async function updateTeamMemberRoleClient(input: {
+  userId: string
+  newRole: string
+}): Promise<{ success: boolean; error?: string }> {
+  const profile = await requireRole('superadmin', 'admin')
+  const supabase = await createClient()
+  const userId = input.userId?.trim()
+  const newRole = input.newRole?.trim()
+
+  if (!userId || !newRole) {
+    return { success: false, error: 'User and role are required.' }
+  }
+  if (!isAssignableRole(newRole)) {
+    return { success: false, error: 'Invalid role.' }
+  }
+
+  const { data: targetUser } = await supabase
+    .from('profiles')
+    .select('organisation_id, role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (!targetUser || targetUser.organisation_id !== profile.organisation_id) {
+    return { success: false, error: 'User not found in your organisation.' }
+  }
+
+  const oldRole = String((targetUser as { role?: string }).role ?? '')
+
+  if (profile.role === 'admin') {
+    if (newRole === 'superadmin') {
+      return { success: false, error: 'Only a superadmin can assign that role.' }
+    }
+    if (oldRole === 'superadmin') {
+      return { success: false, error: 'You cannot change a superadmin user.' }
+    }
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ role: newRole, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .eq('organisation_id', profile.organisation_id)
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  logAuditWithServerSupabase(supabase, 'edit', 'clinician', userId, {
+    old_role: oldRole,
+    new_role: newRole,
+  })
+
+  revalidatePath('/admin')
+  revalidatePath('/clinicians')
+  return { success: true }
 }
 
 /** Activate or deactivate a team member (admin/superadmin; cannot change self). */
@@ -159,6 +305,56 @@ export async function setProfileActive(formData: FormData): Promise<void> {
 
   revalidatePath('/admin')
   revalidatePath('/clinicians')
+}
+
+/** Same as form `setProfileActive` but returns JSON for client-driven flows. */
+export async function setTeamMemberActiveStatus(input: {
+  userId: string
+  makeActive: boolean
+}): Promise<{ success: boolean; error?: string }> {
+  const profile = await requireRole('superadmin', 'admin')
+  const supabase = await createClient()
+  const userId = input.userId?.trim()
+  if (!userId) {
+    return { success: false, error: 'User is required.' }
+  }
+  if (userId === profile.id) {
+    return { success: false, error: 'You cannot change your own access status.' }
+  }
+
+  const { data: target } = await supabase
+    .from('profiles')
+    .select('organisation_id, role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (!target || target.organisation_id !== profile.organisation_id) {
+    return { success: false, error: 'User not found in your organisation.' }
+  }
+
+  if (profile.role === 'admin' && String(target.role) === 'superadmin') {
+    return { success: false, error: 'You cannot change a superadmin user.' }
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      is_active: input.makeActive,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+    .eq('organisation_id', profile.organisation_id)
+
+  if (error) {
+    return { success: false, error: error.message }
+  }
+
+  logAuditWithServerSupabase(supabase, 'deactivate', 'clinician', userId, {
+    is_active: input.makeActive,
+  })
+  revalidatePath('/admin')
+  revalidatePath('/clinicians')
+  return { success: true }
 }
 
 export async function syncClinicianPracticeAssignments(
@@ -251,5 +447,171 @@ export async function syncClinicianPracticeAssignments(
   revalidatePath('/admin')
   revalidatePath('/activity')
   revalidatePath('/clinicians')
+  return { success: true }
+}
+
+export async function updatePcnDetails(input: {
+  pcnId: string
+  name: string
+}): Promise<{ success: boolean; error?: string }> {
+  const profile = await requireRole('superadmin', 'admin')
+  const supabase = await createClient()
+  const pcnId = input.pcnId?.trim()
+  const name = input.name?.trim()
+  if (!pcnId || !name) {
+    return { success: false, error: 'PCN id and name are required.' }
+  }
+
+  const { data: row } = await supabase
+    .from('pcns')
+    .select('id, organisation_id')
+    .eq('id', pcnId)
+    .maybeSingle()
+
+  if (!row || row.organisation_id !== profile.organisation_id) {
+    return { success: false, error: 'PCN not found.' }
+  }
+
+  const { error } = await supabase
+    .from('pcns')
+    .update({ name })
+    .eq('id', pcnId)
+    .eq('organisation_id', profile.organisation_id)
+
+  if (error) return { success: false, error: error.message }
+
+  logAuditWithServerSupabase(supabase, 'edit', 'admin', pcnId, { type: 'pcn', name })
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+export async function setPcnActiveFlag(input: {
+  pcnId: string
+  isActive: boolean
+}): Promise<{ success: boolean; error?: string }> {
+  const profile = await requireRole('superadmin', 'admin')
+  const supabase = await createClient()
+  const pcnId = input.pcnId?.trim()
+  if (!pcnId) return { success: false, error: 'PCN id is required.' }
+
+  const { data: row } = await supabase
+    .from('pcns')
+    .select('id, organisation_id')
+    .eq('id', pcnId)
+    .maybeSingle()
+
+  if (!row || row.organisation_id !== profile.organisation_id) {
+    return { success: false, error: 'PCN not found.' }
+  }
+
+  const { error } = await supabase
+    .from('pcns')
+    .update({ is_active: input.isActive })
+    .eq('id', pcnId)
+    .eq('organisation_id', profile.organisation_id)
+
+  if (error) return { success: false, error: error.message }
+
+  logAuditWithServerSupabase(supabase, 'edit', 'admin', pcnId, {
+    type: 'pcn',
+    is_active: input.isActive,
+  })
+  revalidatePath('/admin')
+  return { success: true }
+}
+
+export async function updatePracticeDetails(input: {
+  practiceId: string
+  name: string
+  pcnId: string | null
+}): Promise<{ success: boolean; error?: string }> {
+  const profile = await requireRole('superadmin', 'admin')
+  const supabase = await createClient()
+  const practiceId = input.practiceId?.trim()
+  const name = input.name?.trim()
+  if (!practiceId || !name) {
+    return { success: false, error: 'Practice id and name are required.' }
+  }
+
+  const { data: pr } = await supabase
+    .from('practices')
+    .select('id, organisation_id')
+    .eq('id', practiceId)
+    .maybeSingle()
+
+  if (!pr || pr.organisation_id !== profile.organisation_id) {
+    return { success: false, error: 'Practice not found.' }
+  }
+
+  const pcnId: string | null = input.pcnId?.trim() || null
+  if (pcnId) {
+    const { data: pcn } = await supabase
+      .from('pcns')
+      .select('id')
+      .eq('id', pcnId)
+      .eq('organisation_id', profile.organisation_id)
+      .maybeSingle()
+    if (!pcn) {
+      return { success: false, error: 'Invalid PCN for this organisation.' }
+    }
+  }
+
+  const { error } = await supabase
+    .from('practices')
+    .update({
+      name,
+      pcn_id: pcnId,
+    })
+    .eq('id', practiceId)
+    .eq('organisation_id', profile.organisation_id)
+
+  if (error) return { success: false, error: error.message }
+
+  logAuditWithServerSupabase(supabase, 'edit', 'admin', practiceId, {
+    type: 'practice',
+    name,
+    pcn_id: pcnId,
+  })
+  revalidatePath('/admin')
+  revalidatePath('/activity')
+  revalidatePath('/clinicians')
+  return { success: true }
+}
+
+export async function setPracticeActiveFlag(input: {
+  practiceId: string
+  isActive: boolean
+}): Promise<{ success: boolean; error?: string }> {
+  const profile = await requireRole('superadmin', 'admin')
+  const supabase = await createClient()
+  const practiceId = input.practiceId?.trim()
+  if (!practiceId) return { success: false, error: 'Practice id is required.' }
+
+  const { data: pr } = await supabase
+    .from('practices')
+    .select('id, organisation_id')
+    .eq('id', practiceId)
+    .maybeSingle()
+
+  if (!pr || pr.organisation_id !== profile.organisation_id) {
+    return { success: false, error: 'Practice not found.' }
+  }
+
+  const { error } = await supabase
+    .from('practices')
+    .update({
+      is_active: input.isActive,
+    })
+    .eq('id', practiceId)
+    .eq('organisation_id', profile.organisation_id)
+
+  if (error) return { success: false, error: error.message }
+
+  logAuditWithServerSupabase(supabase, 'edit', 'admin', practiceId, {
+    type: 'practice',
+    is_active: input.isActive,
+  })
+  revalidatePath('/admin')
+  revalidatePath('/activity')
   return { success: true }
 }

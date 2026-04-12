@@ -9,9 +9,12 @@ import { formatDateUK } from "@/lib/datetime";
 import type { TeamMemberRow } from "@/lib/supabase/data";
 import { formatRoleLabel } from "@/lib/role-format";
 import { cn } from "@/lib/utils";
+import { TeamMemberAdminActions } from "@/components/clinicians/team-member-admin-actions";
 
 type Props = {
   members: TeamMemberRow[];
+  viewerRole: string;
+  viewerUserId: string;
 };
 
 function practicesDisplay(row: TeamMemberRow) {
@@ -43,7 +46,7 @@ function roleBadgeClass(role: string): string {
   }
 }
 
-export function CliniciansView({ members }: Props) {
+export function CliniciansView({ members, viewerRole, viewerUserId }: Props) {
   const [showInactive, setShowInactive] = useState(false);
 
   const visible = useMemo(() => {
@@ -130,6 +133,13 @@ export function CliniciansView({ members }: Props) {
                 <p className="mt-2 text-xs text-gray-600">
                   Practices: {practicesDisplay(row)}
                 </p>
+                <div className="mt-3 flex justify-end border-t border-gray-100 pt-3">
+                  <TeamMemberAdminActions
+                    member={row}
+                    viewerRole={viewerRole}
+                    viewerUserId={viewerUserId}
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -173,6 +183,11 @@ export function CliniciansView({ members }: Props) {
                 <th className="px-4 py-3 text-xs font-medium text-gray-500">
                   Practices
                 </th>
+                {viewerRole === "admin" || viewerRole === "superadmin" ? (
+                  <th className="px-4 py-3 text-xs font-medium text-gray-500">
+                    Actions
+                  </th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -216,6 +231,15 @@ export function CliniciansView({ members }: Props) {
                   <td className="min-w-[8rem] max-w-[14rem] px-4 py-3 text-gray-700">
                     {practicesDisplay(row)}
                   </td>
+                  {viewerRole === "admin" || viewerRole === "superadmin" ? (
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <TeamMemberAdminActions
+                    member={row}
+                    viewerRole={viewerRole}
+                    viewerUserId={viewerUserId}
+                  />
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
