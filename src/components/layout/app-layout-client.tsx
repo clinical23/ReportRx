@@ -19,7 +19,8 @@ type Props = {
   canAccessAdmin: boolean;
   canAccessCliniciansDirectory: boolean;
   profile: Profile;
-  practiceName: string;
+  /** Shown under “Clinical Workspace” (clinician: name; others: organisation or practice). */
+  workspaceSubtitle: string;
 };
 
 export function AppLayoutClient({
@@ -27,7 +28,7 @@ export function AppLayoutClient({
   canAccessAdmin,
   canAccessCliniciansDirectory,
   profile,
-  practiceName,
+  workspaceSubtitle,
 }: Props) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -41,7 +42,7 @@ export function AppLayoutClient({
   }
 
   const sidebarProps = {
-    practiceName,
+    workspaceSubtitle,
     canAccessAdmin,
     canAccessCliniciansDirectory,
     profile,
@@ -56,13 +57,13 @@ export function AppLayoutClient({
 
       <MobileHeader
         onMenuClick={() => setDrawerOpen(true)}
-        practiceName={practiceName}
+        workspaceSubtitle={workspaceSubtitle}
       />
 
       <MobileDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        practiceName={practiceName}
+        workspaceSubtitle={workspaceSubtitle}
         canAccessAdmin={canAccessAdmin}
         canAccessCliniciansDirectory={canAccessCliniciansDirectory}
         profile={profile}

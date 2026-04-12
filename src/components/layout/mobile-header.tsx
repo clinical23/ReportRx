@@ -4,10 +4,10 @@ import { Menu } from "lucide-react";
 
 type Props = {
   onMenuClick: () => void;
-  practiceName: string;
+  workspaceSubtitle: string;
 };
 
-export function MobileHeader({ onMenuClick, practiceName }: Props) {
+export function MobileHeader({ onMenuClick, workspaceSubtitle }: Props) {
   return (
     <header className="fixed left-0 right-0 top-0 z-40 flex h-14 shrink-0 items-center border-b border-gray-200 bg-white px-3 md:hidden">
       <button
@@ -21,9 +21,9 @@ export function MobileHeader({ onMenuClick, practiceName }: Props) {
 
       <div className="flex min-w-0 flex-1 flex-col items-center justify-center px-2 text-center">
         <span className="text-base font-semibold text-gray-900">ReportRx</span>
-        {practiceName ? (
+        {workspaceSubtitle ? (
           <span className="mt-0.5 max-w-full truncate text-xs text-gray-500">
-            {practiceName}
+            {workspaceSubtitle}
           </span>
         ) : null}
       </div>

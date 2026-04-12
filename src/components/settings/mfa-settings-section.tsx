@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, Copy, Shield } from "lucide-react";
+import { CheckCircle2, Copy, Info, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { logAudit } from "@/lib/audit";
@@ -287,17 +287,60 @@ export function MfaSettingsSection() {
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-              <Button
-                type="button"
-                className="min-h-11 w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto sm:min-h-0"
-                onClick={() => {
-                  setModalOpen(true);
-                  void startEnrolment();
-                }}
-              >
-                Set up 2FA
-              </Button>
+            <div className="space-y-4">
+              <div className="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-gray-800">
+                <Info
+                  className="mt-0.5 size-5 shrink-0 text-blue-600"
+                  aria-hidden
+                />
+                <div className="min-w-0 space-y-3">
+                  <p className="font-semibold text-gray-900">
+                    How to set up two-factor authentication
+                  </p>
+                  <ol className="list-decimal space-y-2 pl-4 marker:text-gray-600">
+                    <li>
+                      Download an authenticator app on your phone:
+                      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-gray-700">
+                        <li>
+                          Google Authenticator (free) — App Store and Google Play
+                        </li>
+                        <li>
+                          Microsoft Authenticator (free) — App Store and Google Play
+                        </li>
+                      </ul>
+                    </li>
+                    <li>Click &quot;Set up 2FA&quot; below.</li>
+                    <li>
+                      Open your authenticator app and tap the &quot;+&quot; button to add a
+                      new account.
+                    </li>
+                    <li>
+                      Scan the QR code shown on screen with your phone&apos;s camera
+                      (or tap &quot;Can&apos;t scan?&quot; to enter the code manually).
+                    </li>
+                    <li>
+                      Enter the 6-digit code from your authenticator app to confirm
+                      setup.
+                    </li>
+                  </ol>
+                  <p className="text-gray-700">
+                    Once enabled, you&apos;ll need to enter a code from your app each
+                    time you sign in.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <Button
+                  type="button"
+                  className="min-h-11 w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto sm:min-h-0"
+                  onClick={() => {
+                    setModalOpen(true);
+                    void startEnrolment();
+                  }}
+                >
+                  Set up 2FA
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

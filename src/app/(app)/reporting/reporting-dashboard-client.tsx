@@ -54,6 +54,48 @@ function appointmentsTooltipFormatter(value: unknown): [string | number, string]
   return [typeof value === 'number' || typeof value === 'string' ? value : 0, 'Appointments']
 }
 
+function truncateYAxisLabel(value: unknown, maxLen: number): string {
+  const s = String(value ?? '')
+  if (s.length <= maxLen) return s
+  return `${s.slice(0, maxLen)}…`
+}
+
+function CategoryBarTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean
+  payload?: Array<{ payload?: CategoryBreakdownItem }>
+}) {
+  if (!active || !payload?.length) return null
+  const row = payload[0].payload
+  if (!row) return null
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-lg">
+      <p className="max-w-xs font-medium leading-snug text-gray-900">{row.category_name}</p>
+      <p className="mt-1 tabular-nums text-gray-600">Appointments: {row.total_count}</p>
+    </div>
+  )
+}
+
+function PracticeBarTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean
+  payload?: Array<{ payload?: PracticeBreakdownItem }>
+}) {
+  if (!active || !payload?.length) return null
+  const row = payload[0].payload
+  if (!row) return null
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-lg">
+      <p className="max-w-xs font-medium leading-snug text-gray-900">{row.practice_name}</p>
+      <p className="mt-1 tabular-nums text-gray-600">Appointments: {row.total_count}</p>
+    </div>
+  )
+}
+
 function dataCompletenessClass(pct: number): 'good' | 'mid' | 'bad' {
   if (pct > 90) return 'good'
   if (pct >= 70) return 'mid'
@@ -498,11 +540,22 @@ export function ReportingDashboardClient({
           ) : (
             <div className="h-[300px] md:h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={byCategory} layout="vertical" margin={{ left: 8, right: 8 }}>
+                <BarChart
+                  data={byCategory}
+                  layout="vertical"
+                  margin={{ left: 16, right: 12, top: 8, bottom: 8 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" label={{ value: 'Appointments', position: 'insideBottom', offset: -4 }} />
-                  <YAxis type="category" dataKey="category_name" width={96} />
-                  <Tooltip formatter={appointmentsTooltipFormatter} />
+                  <YAxis
+                    type="category"
+                    dataKey="category_name"
+                    width={172}
+                    tick={{ fontSize: 12 }}
+                    interval={0}
+                    tickFormatter={(v) => truncateYAxisLabel(v, 32)}
+                  />
+                  <Tooltip content={<CategoryBarTooltip />} cursor={{ fill: 'rgba(13, 148, 136, 0.06)' }} />
                   <Bar dataKey="total_count" fill="#0D9488" radius={[0, 6, 6, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -516,11 +569,22 @@ export function ReportingDashboardClient({
           ) : (
             <div className="h-[300px] md:h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={practiceChartData} layout="vertical" margin={{ left: 8, right: 8 }}>
+                <BarChart
+                  data={practiceChartData}
+                  layout="vertical"
+                  margin={{ left: 16, right: 12, top: 8, bottom: 8 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" label={{ value: 'Appointments', position: 'insideBottom', offset: -4 }} />
-                  <YAxis type="category" dataKey="practice_name" width={96} />
-                  <Tooltip formatter={appointmentsTooltipFormatter} />
+                  <YAxis
+                    type="category"
+                    dataKey="practice_name"
+                    width={168}
+                    tick={{ fontSize: 11 }}
+                    interval={0}
+                    tickFormatter={(v) => truncateYAxisLabel(v, 25)}
+                  />
+                  <Tooltip content={<PracticeBarTooltip />} cursor={{ fill: 'rgba(13, 148, 136, 0.06)' }} />
                   <Bar dataKey="total_count" radius={[0, 6, 6, 0]}>
                     {practiceChartData.map((entry) => (
                       <Cell key={entry.practice_name} fill={entry.fill} />

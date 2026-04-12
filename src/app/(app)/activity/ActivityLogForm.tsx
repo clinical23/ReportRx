@@ -34,6 +34,8 @@ type Props = {
   defaultPracticeId: string | null;
   /** From organisations.settings.default_hours_per_day */
   defaultHoursPerDay?: number;
+  /** Only admins may add categories from the activity form */
+  allowAddCategory?: boolean;
 };
 
 type CountMap = Record<string, number>;
@@ -123,6 +125,7 @@ export default function ActivityLogForm({
   clinicianDisplayName,
   defaultPracticeId,
   defaultHoursPerDay = 7.5,
+  allowAddCategory = false,
 }: Props) {
   const scopedPractices =
     variant === "clinician" &&
@@ -477,50 +480,52 @@ export default function ActivityLogForm({
               ))}
             </div>
 
-            {showNewCat ? (
-              <div className="mb-4 flex flex-wrap items-center gap-2">
-                <label htmlFor="activity-new-category-name" className="sr-only">
-                  New category name
-                </label>
-                <input
-                  id="activity-new-category-name"
-                  type="text"
-                  placeholder="Category name"
-                  value={newCatName}
-                  onChange={(e) => setNewCatName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-                  className={cn(controlClass, "min-w-0 flex-1")}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  className="min-h-11 px-4 text-base md:h-9 md:text-sm"
-                  onClick={handleAddCategory}
-                  disabled={isPending || !newCatName.trim()}
-                >
-                  Add
-                </Button>
+            {allowAddCategory ? (
+              showNewCat ? (
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <label htmlFor="activity-new-category-name" className="sr-only">
+                    New category name
+                  </label>
+                  <input
+                    id="activity-new-category-name"
+                    type="text"
+                    placeholder="Category name"
+                    value={newCatName}
+                    onChange={(e) => setNewCatName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+                    className={cn(controlClass, "min-w-0 flex-1")}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="min-h-11 px-4 text-base md:h-9 md:text-sm"
+                    onClick={handleAddCategory}
+                    disabled={isPending || !newCatName.trim()}
+                  >
+                    Add
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="min-h-11 text-base md:h-9 md:text-sm"
+                    onClick={() => setShowNewCat(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="min-h-11 text-base md:h-9 md:text-sm"
-                  onClick={() => setShowNewCat(false)}
+                  className="mb-4 h-auto min-h-11 px-0 text-base text-primary hover:bg-transparent hover:text-primary/90 md:min-h-0 md:text-sm"
+                  onClick={() => setShowNewCat(true)}
                 >
-                  Cancel
+                  + Add category
                 </Button>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="mb-4 h-auto min-h-11 px-0 text-base text-primary hover:bg-transparent hover:text-primary/90 md:min-h-0 md:text-sm"
-                onClick={() => setShowNewCat(true)}
-              >
-                + Add category
-              </Button>
-            )}
+              )
+            ) : null}
 
             <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-4">
               <label

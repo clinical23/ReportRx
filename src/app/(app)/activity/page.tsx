@@ -94,6 +94,9 @@ export default async function ActivityPage() {
 
     const variant = isClinician && !isManager ? 'clinician' : 'manager'
 
+    const allowAddActivityCategory =
+      role === 'admin' || role === 'superadmin'
+
     return (
       <div className="mx-auto min-w-0 max-w-4xl space-y-8 overflow-x-hidden pb-24 md:pb-0">
         <RegisterPageView resource="activity_log" />
@@ -123,6 +126,7 @@ export default async function ActivityPage() {
           clinicianDisplayName={clinicianDisplayName}
           defaultPracticeId={profile?.practice_id ?? null}
           defaultHoursPerDay={defaultHoursPerDay}
+          allowAddCategory={allowAddActivityCategory}
         />
         <RecentLogs
           logs={recentLogs}

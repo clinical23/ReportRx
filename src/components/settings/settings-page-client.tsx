@@ -295,7 +295,14 @@ export function SettingsPageClient({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={submitProfile}>
+          <form
+            className="space-y-4"
+            onSubmit={
+              profile.role === "clinician"
+                ? (e) => e.preventDefault()
+                : submitProfile
+            }
+          >
             <div className="grid gap-2">
               <label className="text-xs font-medium text-gray-600" htmlFor="full_name">
                 Full name
@@ -303,10 +310,20 @@ export function SettingsPageClient({
               <input
                 id="full_name"
                 name="full_name"
-                required
+                required={profile.role !== "clinician"}
+                readOnly={profile.role === "clinician"}
                 defaultValue={profile.full_name}
-                className={inputCls}
+                className={cn(
+                  inputCls,
+                  profile.role === "clinician" &&
+                    "cursor-not-allowed bg-gray-50 text-gray-700",
+                )}
               />
+              {profile.role === "clinician" ? (
+                <p className="text-xs text-gray-500">
+                  Your name is managed by an administrator. Contact them if it needs updating.
+                </p>
+              ) : null}
             </div>
             <div className="grid gap-2">
               <span className="text-xs font-medium text-gray-600">Email</span>
@@ -343,13 +360,15 @@ export function SettingsPageClient({
                 {profileFlash.message}
               </p>
             ) : null}
-            <Button
-              type="submit"
-              disabled={pending}
-              className="min-h-11 w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto sm:min-h-0"
-            >
-              Save profile
-            </Button>
+            {profile.role === "clinician" ? null : (
+              <Button
+                type="submit"
+                disabled={pending}
+                className="min-h-11 w-full bg-teal-600 text-white hover:bg-teal-700 sm:w-auto sm:min-h-0"
+              >
+                Save profile
+              </Button>
+            )}
           </form>
         </CardContent>
       </Card>
